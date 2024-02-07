@@ -20,7 +20,7 @@ else
 fi
 
 root_dir="$(dirname "$PWD")"
-raw="${root_dir}/benchmark-datasets/batch_effect/${DATASET}/${H5AD_FILE}"
+raw="${root_dir}/datasets/datasets/${H5AD_FILE}"
 output_path="${root_dir}/results/scgen/centralized/${DATASET}/${TARGET_FOLDER}"
 
 combine_flag=""
@@ -42,13 +42,4 @@ python "${root_dir}/centralized_scgen.py" \
 --remove_cell_types "$REMOVE_CELL_TYPES" \
 --early_stopping_kwargs "{'early_stopping_metric': 'val_loss', 'patience': 20, 'threshold': 0, 'reduce_lr': True, 'lr_patience': 13, 'lr_factor': 0.1}" \
 --gpu "$GPU" \
-$combine_flag
-
-python "${root_dir}/analysis.py" \
---uncorrected $raw \
---corrected "${output_path}/corrected.h5ad" \
---batch_key "batch" \
---cell_key "cell_type" \
---remove_cell_types "$REMOVE_CELL_TYPES" \
---plot_dir "$output_path" \
 $combine_flag
