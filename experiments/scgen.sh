@@ -1,14 +1,16 @@
 #!/bin/bash
 
 # Accepting arguments
-DATASET="$1"
-H5AD_FILE="$2"
-REMOVE_CELL_TYPES="$3"
-COMBINE="$4"
-DROP="$5"
-GPU="${6:-1}"
-BATCH_SIZE="${7:-50}"
-Z_DIM="${8:-10}"
+H5AD_FILE="$1"
+REMOVE_CELL_TYPES="$2"
+COMBINE="$3"
+DROP="$4"
+GPU="${5:-1}"
+BATCH_SIZE="${6:-50}"
+Z_DIM="${7:-10}"
+
+# DATASET is H5AD_FILE without the extension
+DATASET=$(echo "$H5AD_FILE" | cut -f 1 -d '.')
 
 # Setting up other variables based on the flags
 if [ "$COMBINE" = "true" ]; then
@@ -20,7 +22,7 @@ else
 fi
 
 root_dir="$(dirname "$PWD")"
-raw="${root_dir}/datasets/datasets/${H5AD_FILE}"
+raw="${root_dir}/data/datasets/${H5AD_FILE}"
 output_path="${root_dir}/results/scgen/centralized/${DATASET}/${TARGET_FOLDER}"
 
 combine_flag=""
@@ -29,7 +31,7 @@ if [ "$COMBINE" = "true" ]; then
 fi
 
 # Running python scripts
-python "${root_dir}/centralized_scgen.py" \
+python "${root_dir}/code/scgen.py" \
 --model_path "${root_dir}/models/centralized/${DATASET}" \
 --data_path "$raw" \
 --output_path "$output_path" \
