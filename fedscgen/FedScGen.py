@@ -18,7 +18,7 @@ import os
 from anndata import AnnData
 from scipy import sparse
 import numpy as np
-from scgen_utils import CustomScGen
+from fedscgen.scgen_utils import CustomScGen
 import torch
 
 
