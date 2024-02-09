@@ -31,7 +31,7 @@ if [ "$COMBINE" = "true" ]; then
 fi
 
 # Running python scripts
-python "${root_dir}/code/scgen.py" \
+python "${root_dir}/scripts/scgen.py" \
 --model_path "${root_dir}/models/centralized/${DATASET}" \
 --data_path "$raw" \
 --output_path "$output_path" \

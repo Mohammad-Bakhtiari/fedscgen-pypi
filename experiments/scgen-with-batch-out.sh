@@ -39,7 +39,7 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
   mkdir -p "${output_path}"
   echo "$batch_out"
   # Running python scripts
-  python "${root_dir}/code/scgen_with_batch_out.py" \
+  python "${root_dir}/scripts/scgen_with_batch_out.py" \
   --model_path "${root_dir}/models/centralized/${DATASET}" \
   --data_path "$raw" \
   --output_path "$output_path" \
