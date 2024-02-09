@@ -61,7 +61,9 @@ def prep(annotation: str, expression: str, path, name, adata_filename, batch_key
     if not ".mtx" in expression:
         adata, logs = annotate(adata, annot_df)
         write_logs(logs, path)
-    adata.obs['batch'] = adata.obs["batch" if batch_key is None else batch_key]
+    batch_key = "batch" if batch_key is None else batch_key
+    adata.obs['org_batch'] = adata.obs[batch_key]
+    adata.obs['batch'] = adata.obs[batch_key].astype("category").cat.codes.astype('str').astype('category')
     adata.obs['cell_type'] = adata.obs[cell_key]
     adata = normalize(adata)
     adata.write(os.path.join(path, adata_filename))
