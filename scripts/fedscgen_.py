@@ -3,16 +3,6 @@ import argparse
 import anndata
 from functools import partial
 import ast
-import sys
-from pathlib import Path
-
-# Get the parent directory
-parent_dir = str(Path(__file__).resolve().parent.parent)
-
-# Add the parent directory to sys.path
-if parent_dir not in sys.path:
-    sys.path.append(parent_dir)
-
 from fedscgen.FedScGen import FedScGen
 from fedscgen.utils import testset_combination, aggregate, aggregate_batch_sizes, remove_cell_types, combine_cell_types, \
     get_cuda_device
