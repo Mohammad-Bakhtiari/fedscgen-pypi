@@ -23,7 +23,7 @@ else
 fi
 
 root_dir="$(dirname "$PWD")"
-raw="${root_dir}/benchmark-datasets/batch_effect/${DATASET}/${H5AD_FILE}"
+raw="${root_dir}/datasets/datasets/${H5AD_FILE}"
 output_path="${root_dir}/results/scgen/centralized/${DATASET}/${TARGET_FOLDER}"
 
 combine_flag=""
