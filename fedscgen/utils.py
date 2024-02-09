@@ -1,5 +1,4 @@
 import os
-
 from collections import Counter
 import shutil
 import anndata
@@ -14,7 +13,7 @@ import torch.nn as nn
 import torchmetrics
 from sklearn.preprocessing import LabelEncoder, QuantileTransformer, StandardScaler, MinMaxScaler
 from sklearn.model_selection import StratifiedKFold
-
+from sklearn.decomposition import PCA
 import ast
 import scanpy as sc
 import torch.nn.functional as F
@@ -448,6 +447,24 @@ def get_latent(adata, latent):
     if latent:
         return adata.obsm['latent_corrected']
     return adata.X
+
+
+def calc_obsm_pca(adata_file_paths, n_components=50, common_space=False):
+    adata_files = {}
+    if common_space:
+        pca = PCA(n_components=n_components)
+    for counter, (key, path) in enumerate(adata_file_paths.items()):
+        adata = anndata.read_h5ad(path)
+        if not common_space:
+            pca = PCA(n_components=n_components)
+            pca.fit(adata.X)
+        elif counter == 0:
+            pca.fit(adata.X)
+
+        adata.obsm[f'pca_{n_components}'] = pca.transform(adata.X)
+        adata_files[key] = adata
+
+    return adata_files
 
 
 def aggregate(state_dicts, n_samples):
