@@ -1,3 +1,4 @@
+import __init__
 import argparse
 import os
 from fedscgen.utils import calc_obsm_pca

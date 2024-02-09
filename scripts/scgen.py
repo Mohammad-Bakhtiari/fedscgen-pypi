@@ -1,3 +1,4 @@
+import __init__
 import os.path
 import argparse
 import ast
