@@ -11,6 +11,7 @@ N_CLIENTS_VALUES=($6)
 BATCHES=$7
 GPU="${8:-1}"
 BATCH_SIZE="${9:-50}"
+SNAPSHOT="${10:false}"
 
 
 # DATASET is H5AD_FILE without the extension
@@ -22,16 +23,21 @@ echo $BATCHES
 
 # Setting up other variables based on the flags
 if [ "$COMBINE" = "true" ]; then
-  TARGET_FOLDER="combined"
+  INCLUSION="combined"
 elif [ "$DROP" = "true" ]; then
-  TARGET_FOLDER="dropped"
+  INCLUSION="dropped"
 else
-  TARGET_FOLDER="all"
+  INCLUSION="all"
 fi
+
+if [ "$SNAPSHOT" = "true" ]; then
+  snapshot_flag="--per_round_snapshots"
+fi
+
 
 root_dir="$(dirname "$PWD")"
 raw="${root_dir}/data/datasets/${H5AD_FILE}"
-output_path="${root_dir}/results/scgen/federated/${DATASET}/${TARGET_FOLDER}"
+output_path="${root_dir}/results/scgen/federated/${DATASET}/${INCLUSION}"
 
 combine_flag=""
 if [ "$COMBINE" = "true" ]; then
@@ -63,5 +69,6 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
         --remove_cell_types "$REMOVE_CELL_TYPES" \
         --gpu "$GPU" \
         --n_rounds 10 \
-        $combine_flag >> "${output}/logs"
+        $combine_flag \
+        $snapshot_flag >> "${output}/logs"
 done

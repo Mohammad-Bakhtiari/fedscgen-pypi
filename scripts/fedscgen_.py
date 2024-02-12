@@ -71,13 +71,20 @@ def main(args):
             c = FedScGen(**kwargs)
             clients.append(c)
         global_weights = clients[0].get_weights()
+        global_model = copy.deepcopy(clients[0])
         # training
         for r in range(1, args.n_rounds + 1):
             print(f"Round {r}/{args.n_rounds} of communication...")
             local_weights, local_n_samples = update_clients(clients, global_weights)
             print("Aggregating weights...")
             global_weights = aggregate(local_weights, local_n_samples)
-        global_model = copy.deepcopy(clients[0])
+            if args.per_round_snapshots:
+                global_model.set_weights(global_weights)
+                corrected_adata = global_model.model.batch_removal(adata,
+                                                                   batch_key=args.batch_key,
+                                                                   cell_label_key=args.cell_key,
+                                                                   return_latent=True)
+                corrected_adata.write(f"{args.output}/{translate(str(test_batches))}/corrected_{r}.h5ad")
         global_model.set_weights(global_weights)
         corrected_adata = evaluate(adata, clients, global_model, test_adata, test_batches, args.batches, args.batch_key,
                                    args.cell_key,
@@ -193,6 +200,7 @@ if __name__ == '__main__':
     parser.add_argument("--ref_model", type=str, default="ref_model")
     parser.add_argument("--remove_cell_types", type=str, default="")
     parser.add_argument("--combine", action='store_true', default=False)
+    parser.add_argument("--per_round_snapshots", action='store_true', default=False)
     args = parser.parse_args()
 
     args.hidden_size = [int(num) for num in args.hidden_size.replace(" ", "").split(",")]
