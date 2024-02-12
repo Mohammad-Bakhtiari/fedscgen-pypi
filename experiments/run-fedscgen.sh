@@ -59,20 +59,20 @@ chmod +x fedscgen.sh
 
 # MouseBrain.h5ad
 # Scenario 1: Dropping cell types but not combining
-./fedscgen.sh "MouseBrain.h5ad" "Olfactory ensheathing cells,Choroid_plexus,Mitotic" false true "0" "2" "batch1,batch2" 1
+./fedscgen.sh "MouseBrain.h5ad" "Olfactory ensheathing cells,Choroid_plexus,Mitotic" false true "0" "2" "0,1" 1
 
 # Scenario 2: Combining cell types but not dropping
-./fedscgen.sh "MouseBrain.h5ad" "Olfactory ensheathing cells,Choroid_plexus,Mitotic" true false "0" "2" "batch1,batch2" 1
+./fedscgen.sh "MouseBrain.h5ad" "Olfactory ensheathing cells,Choroid_plexus,Mitotic" true false "0" "2" "0,1" 1
 
 # Scenario 3: Neither combining nor dropping any cell types
-./fedscgen.sh "MouseBrain.h5ad" "" false false "0" "2" "batch1,batch2" 1
+./fedscgen.sh "MouseBrain.h5ad" "" false false "0" "2" "0,1" 1
 
 # MouseHematopoieticStemProgenitorCells.h5ad
 # Scenario 1: Dropping cell types but not combining
-./fedscgen.sh "MouseHematopoieticStemProgenitorCells.h5ad" "MPP,LTHSC,LMPP,Unsorted" false true "0" "2" "1,2" 1
+./fedscgen.sh "MouseHematopoieticStemProgenitorCells.h5ad" "MPP,LTHSC,LMPP,Unsorted" false true "0" "2" "0,1" 1
 
 # Scenario 2: Combining cell types but not dropping
-./fedscgen.sh "MouseHematopoieticStemProgenitorCells.h5ad" "MPP,LTHSC,LMPP,Unsorted" true false "0" "2" "1,2" 1
+./fedscgen.sh "MouseHematopoieticStemProgenitorCells.h5ad" "MPP,LTHSC,LMPP,Unsorted" true false "0" "2" "0.1" 1
 
 # Scenario 3: Neither combining nor dropping any cell types
-./fedscgen.sh "MouseHematopoieticStemProgenitorCells.h5ad" "" false false "0" "2" "1,2" 1
+./fedscgen.sh "MouseHematopoieticStemProgenitorCells.h5ad" "" false false "0" "2" "0,1" 1
