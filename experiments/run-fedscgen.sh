@@ -72,7 +72,7 @@ chmod +x fedscgen.sh
 ./fedscgen.sh "MouseHematopoieticStemProgenitorCells.h5ad" "MPP,LTHSC,LMPP,Unsorted" false true "0" "2" "0,1" 1
 
 # Scenario 2: Combining cell types but not dropping
-./fedscgen.sh "MouseHematopoieticStemProgenitorCells.h5ad" "MPP,LTHSC,LMPP,Unsorted" true false "0" "2" "0.1" 1
+  ./fedscgen.sh "MouseHematopoieticStemProgenitorCells.h5ad" "MPP,LTHSC,LMPP,Unsorted" true false "0" "2" "0,1" 1
 
 # Scenario 3: Neither combining nor dropping any cell types
 ./fedscgen.sh "MouseHematopoieticStemProgenitorCells.h5ad" "" false false "0" "2" "0,1" 1
