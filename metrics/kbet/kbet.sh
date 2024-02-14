@@ -4,19 +4,19 @@
 parent_dir="$(dirname "$PWD")"
 root_dir="$(dirname "$parent_dir")"
 
-TARGET_FOLDER=("all" "dropped" "combined")
-DATASETS_NUMBERS=(1 2 4 5 6 7 8 10)
-DROPPED_DATASETS_NUMBERS=(2 4 5 7 8 10)
+INCLUSION=("all" "dropped" "combined")
+DATASETS=("HumanDendriticCells" "MouseCellAtlas" "HumanPancreas" "PBMC" "CellLine" "MouseRetina" "MouseBrain" "MouseHematopoieticStemProgenitorCells")
+DROPPED_DATASETS=("MouseCellAtlas" "HumanPancreas" "PBMC" "MouseRetina" "MouseBrain" "MouseHematopoieticStemProgenitorCells")
 
 # All datasets all scenarios
-for T in "${TARGET_FOLDER[@]}"; do
+for T in "${INCLUSION[@]}"; do
   if [[ "$T" != "all" ]]; then
-    DATASETS_NUMBERS=("${DROPPED_DATASETS_NUMBERS[@]}")
+    DATASETS=("${DROPPED_DATASETS[@]}")
   fi
 
   # Loop through each dataset
-  for index in "${!DATASETS_NUMBERS[@]}"; do
-    DIR_PATH="${root_dir}/results/scgen/eval/dataset${DATASETS_NUMBERS[$index]}/${T}"
+  for index in "${!DATASETS[@]}"; do
+    DIR_PATH="${root_dir}/results/scgen/eval/${DATASETS[$index]}/${T}"
     echo "Running kbet_calculator.R for ${DIR_PATH}"
     Rscript kbet_calculator.R "${DIR_PATH}"
   done
