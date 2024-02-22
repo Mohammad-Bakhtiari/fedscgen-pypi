@@ -32,7 +32,7 @@ fi
 
 # Running python scripts
 python "${root_dir}/scripts/scgen.py" \
---model_path "${root_dir}/models/centralized/${DATASET}" \
+--model_path "${root_dir}/models/${DATASET}" \
 --data_path "$raw" \
 --output_path "$output_path" \
 --epoch 100 \
