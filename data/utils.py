@@ -116,7 +116,7 @@ def read_dataset(annotation, expression, path):
     if ".mtx" in expression:
         matrix = mmread(os.path.join(path, expression)).T
         assert matrix.shape[0] == annot_df.shape[0], "Mismatch in number of cells between mtx file and df."
-        adata = sc.AnnData(X=matrix, obs=annot_df, dtype='float32')
+        adata = sc.AnnData(X=matrix, obs=annot_df, dtype='float64')
         adata.X = adata.X.tocsr()
     else:
         adata = sc.read_text(os.path.join(path, expression), delimiter='\t', first_column_names=True, dtype='float32')
