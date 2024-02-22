@@ -61,13 +61,10 @@ def gen_color_dict(batch_key, cell_label_key, data):
 
 def plot_all_umaps(data):
     plot = partial(umap_plot, batch_key=data.batch_key, cell_label_key=data.cell_label_key)
-    sc.settings.figdir = data.umap_directory
-    sc.settings.set_figure_params(dpi=200, frameon=False)
-    sc.set_figure_params(dpi=200)
-    sc.set_figure_params(figsize=(4, 4))
+    set_uamp_conf(data.umap_directory)
     plot(data.dataset, wspace=0.6, plt_name="dataset.png")
     plot(data.source, wspace=0.6, plt_name="source.png")
-    plot(data.variant, wspace=0.6, plt_name="target.png")
+    plot(data.inclusion, wspace=0.6, plt_name="target.png")
     plot(data.source_corrected, wspace=0.5, plt_name="source_corrected.png")
     plot(data.target_corrected, wspace=0.5, plt_name="target_corrected.png")
     plot(data.source_corrected, 0.6, use_rep="latent_corrected", plt_name="source_corrected_latent.png")
@@ -78,13 +75,22 @@ def plot_all_umaps(data):
 
 def plot_all_umaps(uncorrected, corrected, batch_key, cell_key, umap_directory):
     plot = partial(umap_plot, batch_key=batch_key, cell_label_key=cell_key)
+    set_uamp_conf(umap_directory)
+    plot(uncorrected, wspace=0.6, plt_name="dataset.png")
+    plot(corrected, wspace=0.6, plt_name="source_corrected.png")
+
+
+def set_uamp_conf(umap_directory):
     sc.settings.figdir = umap_directory
     sc.settings.set_figure_params(dpi=200, frameon=False)
     sc.set_figure_params(dpi=200)
     sc.set_figure_params(figsize=(4, 4))
-    plot(uncorrected, wspace=0.6, plt_name="dataset.png")
-    plot(corrected, wspace=0.6, plt_name="source_corrected.png")
-    plot(corrected, 0.6, use_rep="latent_corrected", plt_name="source_corrected_latent.png")
+
+
+def single_plot(adata, batch_key, cell_key, umap_directory, plot_nanme):
+    plot = partial(umap_plot, batch_key=batch_key, cell_label_key=cell_key)
+    set_uamp_conf(umap_directory)
+    plot(adata, wspace=0.6, plt_name=plot_nanme)
 
 
 def plot_umap_fed_scgen(model, adata, test_adata, test_batches, batches, batch_key, cell_key, output_dir):
