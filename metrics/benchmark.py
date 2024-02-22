@@ -4,7 +4,7 @@ import argparse
 import os
 from scarches.metrics import nmi, entropy_batch_mixing, asw
 from utils import (graph_connectivity_score, isolated_label_f1_score, ari_score, bar_plot, plot_metrics_with_circles,
-                   compute_ils, knn_accuracy)
+                   compute_ils, knn_accuracy, DATASETS)
 
 
 def calculate_and_plot_metrics(adata_dict, batch_key, cell_key, plot_name, overwrite=False, n_components=50):
@@ -64,11 +64,15 @@ def benchmark_snapshots(data_dir, n_rounds, n_components, batch_key, cell_key):
 
     """
     all_metrics = []
-    for r in range(1, n_rounds):
+    for r in range(1, n_rounds + 1):
         adata = anndata.read_h5ad(os.path.join(data_dir, f"FedScGen-C5-{r}.h5ad"))
         latent_adata = anndata.AnnData(adata.obsm[f'pca_{n_components}'])
         latent_adata.obs = adata.obs
         all_metrics.append(benchmark(adata, latent_adata, batch_key, cell_key, str(r)))
+    adata = anndata.read_h5ad(os.path.join(data_dir, f"scgen.h5ad"))
+    latent_adata = anndata.AnnData(adata.obsm[f'pca_{n_components}'])
+    latent_adata.obs = adata.obs
+    all_metrics.append(benchmark(adata, latent_adata, batch_key, cell_key, "ScGen"))
     plot_and_save(all_metrics, os.path.join(data_dir, "metrics.png"))
 
 
@@ -108,15 +112,14 @@ def benchmark_batch_out(data_dir, n_batches, n_components, batch_key, cell_key):
         plot_and_save(all_metrics, plot_name)
 
 
+def load_metrics_and_plot(df_path, plot_name):
+    df = pd.read_csv(df_path)
+    bar_plot(df, plot_name.replace(".", "-bar."))
+    df.drop(columns=["ILS", "ILF1"], inplace=True)
+    plot_metrics_with_circles(df, plot_name.replace(".", "-circle."))
+
+
 if __name__ == "__main__":
-    dataests = ["CellLine",
-                "HumanPancreas",
-                "MouseCellAtlas",
-                "MouseRetina",
-                "HumanDendriticCells",
-                "MouseBrain",
-                "MouseHematopoieticStemProgenitorCells",
-                "PBMC"]
     parser = argparse.ArgumentParser(description='Calculate and Plot NMI for a set of adata files.')
 
     # Add arguments
@@ -129,11 +132,15 @@ if __name__ == "__main__":
     parser.add_argument("--scenarios", type=str, default="all", choices=["datasets", "batch-out", "snapshots"])
     parser.add_argument("--n_rounds", type=int, default=10, help="Number of rounds for snapshots")
     parser.add_argument("--n_batches", type=int, default=10, help="Number of batches for batch-out")
+    parser.add_argument("--plot_only", action="store_true", default=False, help="Plot the metrics")
     args = parser.parse_args()
 
-    if args.scenarios == "datasets":
-        benchmark_all_datasets(args.data_dir, dataests, args.inclusion, args.n_components)
-    elif args.scenarios == "batch-out":
-        benchmark_batch_out(args.data_dir, args.n_batches, args.n_components, args.batch_key, args.cell_key)
+    if args.plot_only:
+        load_metrics_and_plot(os.path.join(args.data_dir, "metrics.csv"), os.path.join(args.data_dir, "metrics.png"))
     else:
-        benchmark_snapshots(args.data_dir, args.n_rounds, args.n_components, args.batch_key, args.cell_key)
+        if args.scenarios == "datasets":
+            benchmark_all_datasets(args.data_dir, DATASETS, args.inclusion, args.n_components)
+        elif args.scenarios == "batch-out":
+            benchmark_batch_out(args.data_dir, args.n_batches, args.n_components, args.batch_key, args.cell_key)
+        else:
+            benchmark_snapshots(args.data_dir, args.n_rounds, args.n_components, args.batch_key, args.cell_key)
