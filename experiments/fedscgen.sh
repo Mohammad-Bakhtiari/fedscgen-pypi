@@ -11,7 +11,7 @@ N_CLIENTS_VALUES=($6)
 BATCHES=$7
 GPU="${8:-1}"
 BATCH_SIZE="${9:-50}"
-SNAPSHOT="${10:false}"
+SNAPSHOT="${10:true}"
 
 
 # DATASET is H5AD_FILE without the extension
@@ -52,7 +52,7 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
     echo "Running $batch_out batch out for $n_clients clients"
 
     python3 "${root_dir}/scripts/fedscgen_.py" \
-        --init_model_path "${root_dir}/models/centralized/${DATASET}" \
+        --init_model_path "${root_dir}/models/${DATASET}" \
         --adata "$raw" \
         --output  "$output"\
         --epoch 5 \
@@ -70,5 +70,5 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
         --gpu "$GPU" \
         --n_rounds 10 \
         $combine_flag \
-        $snapshot_flag >> "${output}/logs"
+        $snapshot_flag
 done
