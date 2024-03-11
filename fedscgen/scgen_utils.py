@@ -21,7 +21,6 @@ Original work is licensed under the BSD 3-Clause License.
 
 """
 
-
 from anndata import AnnData
 from scarches.models.scgen.vaearith import vaeArith
 from scarches.trainers.scgen.trainer import vaeArithTrainer
@@ -32,6 +31,8 @@ from torch.utils.data import Dataset, DataLoader, TensorDataset
 import torch
 from scipy import sparse
 import scarches as sca
+
+TORCH_DTYPE = torch.float32
 
 
 class AnndataDataset(Dataset):
@@ -45,7 +46,7 @@ class AnndataDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        return torch.tensor(self.data[idx], dtype=torch.float32)
+        return torch.tensor(self.data[idx], dtype=TORCH_DTYPE)
 
 
 class CustomTrainer(vaeArithTrainer):
@@ -77,6 +78,7 @@ class CustomTrainer(vaeArithTrainer):
         Validate the ScGen model using the given parameters.
 
     """
+
     def __init__(self, model, adata, train_frac: float = 0.9, batch_size=32, shuffle=True,
                  early_stopping_kwargs: dict = {
                      "early_stopping_metric": "val_loss",
@@ -85,7 +87,6 @@ class CustomTrainer(vaeArithTrainer):
                      "reduce_lr": True,
                      "lr_patience": 13,
                      "lr_factor": 0.1}, device=None, **kwargs):
-        super().__init__(model, adata, **kwargs)
         self.model = model
 
         self.seed = kwargs.get("seed", 2021)
@@ -118,7 +119,8 @@ class CustomTrainer(vaeArithTrainer):
         valid_dataset = AnndataDataset(valid_data)
 
         # Create DataLoaders
-        self.train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=4, drop_last=True)
+        self.train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=4,
+                                       drop_last=True)
         self.valid_loader = DataLoader(valid_dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=4)
 
     def train(self, n_epochs=100, lr=0.001, eps=1e-8, **extras_kwargs):
@@ -162,6 +164,7 @@ class CustomTrainer(vaeArithTrainer):
 
                 self.iter_logs["loss"].append(loss.item())
                 train_loss += loss.item()
+            # self.model.eval()
             self.on_epoch_end()
 
             valid_loss = 0
@@ -250,6 +253,7 @@ class CustomVAEArith(vaeArith):
         """ Map `data` in to the latent space. It uses PyTorch Dataloader to
          feed data in encoder part of VAE and compute the latent space coordinates for each sample in data.
         """
+        print("Getting latent space coordinates...")
         batch_size = 256
 
         if not torch.is_tensor(data):
@@ -270,6 +274,7 @@ class CustomVAEArith(vaeArith):
         """ Map back the latent space encoding via the decoder using PyTorch Dataloader.
 
         """
+        print("Reconstructing data...")
         batch_size = 256
         if not torch.is_tensor(data):
             data = torch.tensor(data)
@@ -312,9 +317,10 @@ class CustomScGen(sca.models.scgen):
     dr_rate: float
         Dropout rate for the model.
     """
+
     def __init__(self, adata: AnnData, hidden_layer_sizes: list = [128, 128], z_dimension: int = 10,
-                 dr_rate: float = 0.05):
-        # super().__init__(adata, hidden_layer_sizes, z_dimension, dr_rate)
+                 dr_rate: float = 0.05, device=None):
+        self.device = device
         self.adata = adata
 
         self.x_dim_ = adata.n_vars
@@ -324,7 +330,6 @@ class CustomScGen(sca.models.scgen):
         self.dr_rate_ = dr_rate
         self.model = CustomVAEArith(self.x_dim_, hidden_layer_sizes=self.hidden_layer_sizes_, z_dimension=self.z_dim_,
                                     dr_rate=self.dr_rate_)
-
         self.is_trained_ = False
         self.trainer = None
 
@@ -343,6 +348,7 @@ class CustomScGen(sca.models.scgen):
         -------
 
         """
-        self.trainer = CustomTrainer(self.model, self.adata, batch_size, device=self.device, **kwargs)
+        if self.trainer is None:
+            self.trainer = CustomTrainer(self.model, self.adata, batch_size, device=self.device, **kwargs)
         self.trainer.train(n_epochs, lr, eps)
         self.is_trained_ = True
