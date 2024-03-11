@@ -4,10 +4,11 @@ import argparse
 import anndata
 from functools import partial
 import ast
-from fedscgen.FedScGen import FedScGen
+import numpy as np
+from fedscgen.FedScGen import FedScGen, ScGen
 from fedscgen.utils import testset_combination, aggregate, aggregate_batch_sizes, remove_cell_types, combine_cell_types, \
     get_cuda_device
-from fedscgen.plots import translate, plot_all_umaps
+from fedscgen.plots import translate, plot_all_umaps, single_plot
 
 
 def update_clients(clients, g_weights):
@@ -38,8 +39,7 @@ def main(args):
         adata = combine_cell_types(adata, args.remove_cell_types, args.cell_key)
     else:
         adata = remove_cell_types(adata, args.remove_cell_types, args.cell_key)
-    kwargs = {"init_model_path": args.init_model_path,
-              "ref_model_path": args.ref_model,
+    kwargs = {"ref_model_path": args.ref_model,
               "adata": adata,
               "hidden_layer_sizes": args.hidden_size,
               "z_dimension": args.z_dim,
@@ -63,34 +63,41 @@ def main(args):
         train_batches = copy.deepcopy(args.batches)
         for batch in test_batches:
             train_batches.remove(batch)
-        # train_adata = adata[adata.obs[args.batch_key].isin(train_batches)].copy()
+        global_model = ScGen(init_model_path=args.init_model_path, **kwargs)
+        global_weights = global_model.model.state_dict()
+        global_model.is_trained_ = True
+        global_model.model.eval()
         clients = []
         for client in range(1, args.n_clients + 1):
             print(f"Initializing client {client}...")
             kwargs["adata"] = adata[adata.obs[args.batch_key].isin([train_batches.pop()])].copy()
             c = FedScGen(**kwargs)
             clients.append(c)
-        global_weights = clients[0].get_weights()
-        global_model = copy.deepcopy(clients[0])
         # training
         for r in range(1, args.n_rounds + 1):
             print(f"Round {r}/{args.n_rounds} of communication...")
             local_weights, local_n_samples = update_clients(clients, global_weights)
             print("Aggregating weights...")
             global_weights = aggregate(local_weights, local_n_samples)
+
             if args.per_round_snapshots:
-                global_model.set_weights(global_weights)
+                global_model.model.load_state_dict(global_weights)
                 corrected_adata = global_model.model.batch_removal(adata,
                                                                    batch_key=args.batch_key,
                                                                    cell_label_key=args.cell_key,
                                                                    return_latent=True)
                 corrected_adata.write(f"{args.output}/{translate(str(test_batches))}/corrected_{r}.h5ad")
-        global_model.set_weights(global_weights)
-        corrected_adata = evaluate(adata, clients, global_model, test_adata, test_batches, args.batches, args.batch_key,
-                                   args.cell_key,
-                                   args.output)
+                single_plot(corrected_adata, args.batch_key, args.cell_key,
+                            f"{args.output}/{translate(str(test_batches))}",
+                            f"corrected_{r}.png")
+        if not args.per_round_snapshots:
+            global_model.model.load_state_dict(global_weights)
+            corrected_adata = evaluate(adata, clients, global_model, test_adata, test_batches, args.batches,
+                                       args.batch_key,
+                                       args.cell_key,
+                                       args.output)
+            corrected_adata.write(f"{args.output}/{translate(str(test_batches))}/corrected.h5ad")
         global_model.save(f"{args.output}/{translate(str(test_batches))}/trained_model", overwrite=True)
-        corrected_adata.write(f"{args.output}/{translate(str(test_batches))}/corrected.h5ad")
 
 
 def evaluate(adata, clients, global_model, test_adata, test_batches, batches, batch_key, cell_key, output):
@@ -134,7 +141,16 @@ def evaluate(adata, clients, global_model, test_adata, test_batches, batches, ba
               umap_directory=f"{output}/{trns_test_batches}/dataset")
 
     if len(test_adata) > 0:
-        federated_evaluation(plot_func, clients, global_model, test_adata, test_batches)
+        mean_latent_features = federated_evaluation(plot_func, clients, global_model, test_adata, test_batches)
+        corrected = global_model.remove_batch_effect(adata, mean_latent_features)
+        corrected.write(f"{output}/{trns_test_batches}/fed_corrected.h5ad")
+        # find absolute difference between the corrected and corrected_adata
+        abs_diff = np.abs(corrected.X - corrected_adata.X)
+        print(f"Mean absolute difference between the corrected and corrected_adata: {np.mean(abs_diff)}")
+        print(f"Standard deviation of the absolute difference between the corrected and corrected_adata: {np.std(abs_diff)}")
+        print(f"Maximum absolute difference between the corrected and corrected_adata: {np.max(abs_diff)}")
+        print(f"Minimum absolute difference between the corrected and corrected_adata: {np.min(abs_diff)}")
+        print(f"Sum of the absolute difference between the corrected and corrected_adata: {np.sum(abs_diff)}")
     return corrected_adata
 
 
@@ -168,7 +184,7 @@ def federated_evaluation(plot_func, clients, global_model, test_adata, test_batc
     plot_func(uncorrected=test_adata,
               corrected=global_model.remove_batch_effect(test_adata, global_cell_avg),
               umap_directory=f"{args.output}/{translate(str(test_batches))}/testset")
-
+    return global_cell_avg
 
 if __name__ == '__main__':
     """
@@ -179,10 +195,12 @@ if __name__ == '__main__':
     """
     defalt_root = "/home/bba1658"
     parser = argparse.ArgumentParser()
-    parser.add_argument("--init_model_path", type=str, default=f"{defalt_root}/FedScGen/models/centralized/HumanPancreas")
+    parser.add_argument("--init_model_path", type=str,
+                        default=f"{defalt_root}/FedScGen/models/centralized/HumanPancreas")
     parser.add_argument("--adata", type=str, default=f"{defalt_root}/FedScGen/data/datasets/HumanPancreas.h5ad")
-    parser.add_argument("--output", type=str, default=f"{defalt_root}/FedScGen/results/scgen/federated/HumanPancreas/all/BO0-C5")
-    parser.add_argument("--epoch", type=int, default=5)
+    parser.add_argument("--output", type=str,
+                        default=f"{defalt_root}/FedScGen/results/scgen/federated/HumanPancreas/all/BO0-C5")
+    parser.add_argument("--epoch", type=int, default=1)
     parser.add_argument("--cell_key", type=str, default="cell_type")
     parser.add_argument("--batch_key", type=str, default="batch")
     parser.add_argument("--batches", type=str, default="0,1,2,3,4")
@@ -196,7 +214,7 @@ if __name__ == '__main__':
                                 ' "reduce_lr": True, "lr_patience": 13, "lr_factor": 0.1}')
     parser.add_argument("--batch_out", type=int, default=0)
     parser.add_argument("--n_clients", type=int, default=5)
-    parser.add_argument("--n_rounds", type=int, default=10)
+    parser.add_argument("--n_rounds", type=int, default=1)
     parser.add_argument("--ref_model", type=str, default="ref_model")
     parser.add_argument("--remove_cell_types", type=str, default="")
     parser.add_argument("--combine", action='store_true', default=False)
