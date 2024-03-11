@@ -18,9 +18,18 @@ import os
 from anndata import AnnData
 from scipy import sparse
 import numpy as np
-from fedscgen.scgen_utils import CustomScGen
-from fedscgen.utils import get_w, set_w
 import torch
+from functools import partial
+from copy import deepcopy
+import scarches as sca
+from fedscgen.scgen_utils import CustomScGen, TORCH_DTYPE
+from fedscgen.plots import single_plot
+import warnings
+from numba.core.errors import NumbaDeprecationWarning  # Adjust based on actual availability
+
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+warnings.filterwarnings('ignore', category=NumbaDeprecationWarning)
+warnings.filterwarnings('ignore', message="No data for colormapping provided via 'c'")
 
 
 class ScGen(CustomScGen):
@@ -29,43 +38,46 @@ class ScGen(CustomScGen):
 
     def __init__(self, init_model_path: str, ref_model_path: str, adata: AnnData, hidden_layer_sizes: list,
                  z_dimension: int, batch_key, cell_key, lr, epoch, batch_size, stopping, overwrite, device):
-        super().__init__(adata, hidden_layer_sizes, z_dimension)
-        self.device = device
+        super().__init__(adata, hidden_layer_sizes, z_dimension, device=device)
         self.stopping = stopping
         self.lr = lr
         self.epoch = epoch
         self.batch_size = batch_size
-        self.target_corrected = None
-        self.source_corrected = None
         self.ref_model_path = ref_model_path
         self.batch_key = batch_key
         self.cell_key = cell_key
-        self.source = self.adata
+        self.source = None
         self.target = None
         # The model is automatically loaded
-        self.init_model_path = os.path.join(init_model_path, "init_model")
-        if not overwrite and os.path.exists(self.init_model_path):
-            self.load_model(self.init_model_path)
-        else:
-            self.save(self.init_model_path, overwrite=True)
+        if init_model_path is not None:
+            if not overwrite and os.path.exists(init_model_path):
+                self.load_model(init_model_path)
+            else:
+                self.save(init_model_path, overwrite=True)
         self.model.to(self.device)
 
-    def batch_removal_both(self):
-        """ Removes batch effect from both source and target datasets
-
-        """
-        self.source_corrected = self.batch_removal(self.source, self.batch_key, self.cell_key, return_latent=True)
-        if self.target:
-            self.target_corrected = self.batch_removal(self.target, self.batch_key, self.cell_key, return_latent=True)
-
-    def train_centralized(self):
+    def train_centralized(self, output_path: str):
         """ Trains the model on the source dataset
 
         """
+        plot = partial(single_plot, batch_key=self.batch_key, cell_key=self.cell_key, umap_directory=output_path)
+        remove_batch_effect = partial(self.batch_removal, batch_key=self.batch_key, cell_label_key=self.cell_key)
+        if self.source is not None:
+            all_data = deepcopy(self.adata)
+            self.adata = self.source
         self.train(n_epochs=self.epoch, early_stopping_kwargs=self.stopping, lr=self.lr, batch_size=self.batch_size)
-        self.source_corrected = self.model.batch_removal(self.source, batch_key=self.batch_key,
-                                                         cell_label_key=self.cell_key,
-                                                         return_latent=True)
+        if self.source is not None:
+            corrected = remove_batch_effect(self.source)
+            plot(corrected, plot_name="_source_corrected.png")
+            corrected = sca.models.scgen.map_query_data(corrected_reference=corrected,
+                                                        query=self.target,
+                                                        reference_model=self,
+                                                        batch_key=self.batch_key)
+            plot(corrected, plot_name="_integrated.png")
+            self.adata = all_data
+        corrected = remove_batch_effect(self.adata)
+        corrected.write(os.path.join(output_path, "corrected.h5ad"))
+        plot(corrected, plot_name="_data_corrected.png")
         self.save(self.ref_model_path, overwrite=True)
 
     def split(self, target_batches):
@@ -73,10 +85,6 @@ class ScGen(CustomScGen):
         """
         self.target = self.adata[self.adata.obs[self.batch_key].isin(target_batches)]
         self.source = self.adata[~self.adata.obs[self.batch_key].isin(target_batches)]
-
-    def correct_all_data(self):
-        return self.batch_removal(self.adata, batch_key=self.batch_key, cell_label_key=self.cell_key,
-                                  return_latent=True)
 
     def load_model(self, model_path):
         """ Loads init or a reference model into self.model
@@ -90,6 +98,7 @@ class ScGen(CustomScGen):
         -------
 
         """
+        print(f"Loading model from {model_path}")
         if os.path.exists(model_path):
             saved_state_dict = torch.load(f"{model_path}/model_params.pt")
             self.model.load_state_dict(saved_state_dict)
@@ -111,11 +120,10 @@ class FedScGen(ScGen):
         Remove the batch effect from the dataset
     """
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, init_model_path=None, **kwargs):
+        super().__init__(init_model_path, **kwargs)
         self.unique_cell_types = np.unique(self.adata.obs[self.cell_key])
         self.adata_latent = None
-        # self.device = next(self.model.parameters()).device
         self.round = 0
         self.n_samples = self.adata.X.shape[0]
 
@@ -137,7 +145,7 @@ class FedScGen(ScGen):
 
     def find_batch_size(self):
         """ Find the number of cells in each batch
-            Assuming there is only one batch for exh client
+            Assuming there is only one batch for each client
 
         Returns
         -------
@@ -280,10 +288,7 @@ class FedScGen(ScGen):
         dict
             The weights of the model
         """
-        state_dict = {"encoder": get_w(self.model.encoder),
-                      "decoder": get_w(self.model.decoder)
-                      }
-        return state_dict
+        return self.model.state_dict()
 
     def set_weights(self, state_dict):
         """ Set the weights of the model
@@ -292,8 +297,6 @@ class FedScGen(ScGen):
         state_dict: dict
             The weights of the model
         """
-        set_w(self.model.encoder, state_dict['encoder'])
-        set_w(self.model.decoder, state_dict['decoder'])
-
-
-
+        for name, param in self.model.named_parameters():
+            if name in state_dict:
+                param.data.copy_(state_dict[name].to(param.device))
