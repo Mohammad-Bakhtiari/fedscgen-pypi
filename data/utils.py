@@ -111,13 +111,13 @@ def log(logs, unique, column):
     return logs
 
 
-def read_dataset(annotation, expression, path):
+def read_dataset(annotation, expression, path, dtype='float32'):
     annot_df = pd.read_csv(os.path.join(path, annotation), header=0, index_col=0, sep='\t')
     if ".mtx" in expression:
         matrix = mmread(os.path.join(path, expression)).T
         assert matrix.shape[0] == annot_df.shape[0], "Mismatch in number of cells between mtx file and df."
-        adata = sc.AnnData(X=matrix, obs=annot_df, dtype='float64')
+        adata = sc.AnnData(X=matrix, obs=annot_df, dtype=dtype)
         adata.X = adata.X.tocsr()
     else:
-        adata = sc.read_text(os.path.join(path, expression), delimiter='\t', first_column_names=True, dtype='float32')
+        adata = sc.read_text(os.path.join(path, expression), delimiter='\t', first_column_names=True, dtype=dtype)
     return adata, annot_df
