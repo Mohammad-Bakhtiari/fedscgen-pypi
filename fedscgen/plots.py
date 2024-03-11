@@ -1,12 +1,10 @@
 import copy
-
 import scanpy as sc
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from functools import partial
 import matplotlib.lines as mlines
-
 
 def umap_plot(data, wspace, plt_name, batch_key, cell_label_key, use_rep=None):
     batch_color_dict, cell_color_dict = gen_color_dict(batch_key, cell_label_key, data)
@@ -41,13 +39,9 @@ def gen_color_dict(batch_key, cell_label_key, data):
         '#c44e52', '#8172b3', '#ccb974', '#64B5CD', '#FFB447', '#82C341',
         '#D17049', '#705696'
     ]
-    # batch_labels = data.obs[batch_key].cat.categories
-    # cell_labels = data.obs[cell_label_key].cat.categories
     batch_labels = data.obs[batch_key].unique().tolist()
     cell_labels = data.obs[cell_label_key].unique().tolist()
-    # Check if there are enough colors for the labels
     assert len(cell_labels) <= len(hex_colors), "Not enough colors for labels"
-    # Create dictionaries mapping labels to colors
     if len(hex_colors) >= len(batch_labels):
         batch_color_dict = {label: hex_colors[i] for i, label in enumerate(batch_labels)}
     else:
@@ -57,20 +51,6 @@ def gen_color_dict(batch_key, cell_label_key, data):
     else:
         cell_color_dict = {label: hex_colors[i % len(hex_colors)] for i, label in enumerate(cell_labels)}
     return batch_color_dict, cell_color_dict
-
-
-def plot_all_umaps(data):
-    plot = partial(umap_plot, batch_key=data.batch_key, cell_label_key=data.cell_label_key)
-    set_uamp_conf(data.umap_directory)
-    plot(data.dataset, wspace=0.6, plt_name="dataset.png")
-    plot(data.source, wspace=0.6, plt_name="source.png")
-    plot(data.inclusion, wspace=0.6, plt_name="target.png")
-    plot(data.source_corrected, wspace=0.5, plt_name="source_corrected.png")
-    plot(data.target_corrected, wspace=0.5, plt_name="target_corrected.png")
-    plot(data.source_corrected, 0.6, use_rep="latent_corrected", plt_name="source_corrected_latent.png")
-    plot(data.target_corrected, 0.6, use_rep="latent_corrected", plt_name="target_corrected_latent.png")
-    plot(data.integrated, 0.6, use_rep="latent_corrected", plt_name="integrated_latent.png")
-    plot(data.integrated, 0.6, plt_name="integrated.png")
 
 
 def plot_all_umaps(uncorrected, corrected, batch_key, cell_key, umap_directory):
@@ -87,10 +67,9 @@ def set_uamp_conf(umap_directory):
     sc.set_figure_params(figsize=(4, 4))
 
 
-def single_plot(adata, batch_key, cell_key, umap_directory, plot_nanme):
-    plot = partial(umap_plot, batch_key=batch_key, cell_label_key=cell_key)
+def single_plot(adata, batch_key, cell_key, umap_directory, plot_name):
     set_uamp_conf(umap_directory)
-    plot(adata, wspace=0.6, plt_name=plot_nanme)
+    umap_plot(adata, batch_key=batch_key, cell_label_key=cell_key, plt_name=plot_name, wspace=0.6)
 
 
 def plot_umap_fed_scgen(model, adata, test_adata, test_batches, batches, batch_key, cell_key, output_dir):
