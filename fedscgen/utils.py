@@ -320,7 +320,7 @@ def normalize_data(data, method):
     elif method == "min_max":
         scaler = MinMaxScaler()
         return scaler.fit_transform(data)
-    elif method == "tpm":
+    elif method == "cpm":
         # Normalize to 'counts per million'
         return cpm_normalization(data)
     else:
@@ -469,11 +469,10 @@ def calc_obsm_pca(adata_file_paths, n_components=50, common_space=False):
 
 def aggregate(state_dicts, n_samples):
     sample_ratios = [n / sum(n_samples) for n in n_samples]
-    encoder_weights = [s_d['encoder'] for s_d in state_dicts]
-    decoder_weights = [s_d['decoder'] for s_d in state_dicts]
-    global_weights = {"encoder": average_weights(encoder_weights, sample_ratios),
-                      "decoder": average_weights(decoder_weights, sample_ratios)
-                      }
+    global_weights = {}
+    for param in state_dicts[0].keys():
+        global_weights[param] = torch.stack(
+            [state_dicts[i][param] * sample_ratios[i] for i in range(len(state_dicts))]).sum(0)
     return global_weights
 
 
@@ -497,8 +496,6 @@ def stratify_kfold(adata, n_splits):
     # Split the data
     for train_index, test_index in skf.split(np.zeros(len(studies)), studies):
         yield train_index, test_index
-
-
 
 
 def drop(data, cell_key, drop_cell_values):
