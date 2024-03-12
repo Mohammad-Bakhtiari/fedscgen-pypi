@@ -30,7 +30,8 @@ if [ "$COMBINE" = "true" ]; then
     combine_flag="--combine"
 fi
 
-# Running python scripts
+mkdir -p "${output_path}"
+
 python "${root_dir}/scripts/scgen.py" \
 --model_path "${root_dir}/models/${DATASET}" \
 --data_path "$raw" \
