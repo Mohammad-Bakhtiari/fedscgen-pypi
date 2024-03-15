@@ -31,7 +31,7 @@ IFS="$OLD_IFS"
 
 root_dir="$(dirname "$PWD")"
 raw="${root_dir}/data/datasets/${H5AD_FILE}"
-output_path="${root_dir}/results/scgen/centralized/${DATASET}/${INCLUSION}"
+output_path_ds_inclusion="${root_dir}/results/scgen/centralized/${DATASET}/${INCLUSION}"
 
 combine_flag=""
 if [ "$COMBINE" = "true" ]; then
@@ -39,7 +39,7 @@ if [ "$COMBINE" = "true" ]; then
 fi
 echo "Batch out values: ${BATCH_OUT_VALUES[@]}"
 for batch_out in "${!BATCH_OUT_VALUES[@]}"; do
-  output_path="${output_path}/BO${batch_out}"
+  output_path="${output_path_ds_inclusion}/BO${batch_out}"
   mkdir -p "${output_path}"
   echo "Running scgen with batch out: $batch_out"
   python "${root_dir}/scripts/scgen.py" \
