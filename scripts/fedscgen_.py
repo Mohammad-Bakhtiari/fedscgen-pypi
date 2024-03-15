@@ -4,10 +4,10 @@ import argparse
 import anndata
 from functools import partial
 import ast
-import numpy as np
+import os
 from fedscgen.FedScGen import FedScGen, ScGen
 from fedscgen.utils import testset_combination, aggregate, aggregate_batch_sizes, remove_cell_types, combine_cell_types, \
-    get_cuda_device
+    get_cuda_device, abs_diff_centrally_corrected
 from fedscgen.plots import translate, plot_all_umaps, single_plot
 
 
@@ -63,7 +63,7 @@ def main(args):
         train_batches = copy.deepcopy(args.batches)
         for batch in test_batches:
             train_batches.remove(batch)
-        global_model = ScGen(init_model_path=args.init_model_path, **kwargs)
+        global_model = FedScGen(init_model_path=args.init_model_path, **kwargs)
         global_weights = global_model.model.state_dict()
         global_model.is_trained_ = True
         global_model.model.eval()
@@ -73,6 +73,11 @@ def main(args):
             kwargs["adata"] = adata[adata.obs[args.batch_key].isin([train_batches.pop()])].copy()
             c = FedScGen(**kwargs)
             clients.append(c)
+        test_clients = []
+        for test_batch in test_batches:
+            print(f"Initializing test client for batch {test_batch}...")
+            kwargs["adata"] = adata[adata.obs[args.batch_key] == test_batch].copy()
+            test_clients.append(FedScGen(**kwargs))
         # training
         for r in range(1, args.n_rounds + 1):
             print(f"Round {r}/{args.n_rounds} of communication...")
@@ -92,99 +97,50 @@ def main(args):
                             f"corrected_{r}.png")
         if not args.per_round_snapshots:
             global_model.model.load_state_dict(global_weights)
-            corrected_adata = evaluate(adata, clients, global_model, test_adata, test_batches, args.batches,
-                                       args.batch_key,
-                                       args.cell_key,
-                                       args.output)
-            corrected_adata.write(f"{args.output}/{translate(str(test_batches))}/corrected.h5ad")
+            output_dir = f"{args.output}/{translate(str(test_batches))}"
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+            evaluate_correction(adata, clients, test_clients, global_model, test_batches, args.batch_key, args.cell_key,
+                                output_dir)
         global_model.save(f"{args.output}/{translate(str(test_batches))}/trained_model", overwrite=True)
 
 
-def evaluate(adata, clients, global_model, test_adata, test_batches, batches, batch_key, cell_key, output):
-    """
-    Evaluate the performance of the global model bu plotting UMAPs of source, target, and all data after correction.
-    Parameters
-    ----------
-    adata
-    clients
-    global_model
-    test_adata
-    test_batches
-    batches
-    batch_key
-    cell_key
-    output
-
-    Returns
-    -------
-
-    """
-    sca_batch_removal = partial(global_model.model.batch_removal, batch_key=batch_key, cell_label_key=cell_key,
-                                return_latent=True)
-    plot_func = partial(plot_all_umaps, batch_key=batch_key, cell_key=cell_key)
-    train_batches = copy.deepcopy(batches)
-    for batch in test_batches:
-        train_batches.remove(batch)
-    trns_test_batches = translate(str(test_batches))
-    if len(trns_test_batches) == 0:
-        trns_test_batches = "BO0"
-    train_adata = adata[adata.obs[batch_key].isin(train_batches)].copy()
-    # For plotting the dataset set and trainset we are not bounded by privacy issues since it will not happen in real
-    # world
-    plot_func(uncorrected=train_adata,
-              corrected=sca_batch_removal(train_adata),
-              umap_directory=f"{output}/{trns_test_batches}/trainset")
-
-    corrected_adata = sca_batch_removal(adata)
-    plot_func(uncorrected=adata,
-              corrected=corrected_adata,
-              umap_directory=f"{output}/{trns_test_batches}/dataset")
-
-    if len(test_adata) > 0:
-        mean_latent_features = federated_evaluation(plot_func, clients, global_model, test_adata, test_batches)
-        corrected = global_model.remove_batch_effect(adata, mean_latent_features)
-        corrected.write(f"{output}/{trns_test_batches}/fed_corrected.h5ad")
-        # find absolute difference between the corrected and corrected_adata
-        abs_diff = np.abs(corrected.X - corrected_adata.X)
-        print(f"Mean absolute difference between the corrected and corrected_adata: {np.mean(abs_diff)}")
-        print(f"Standard deviation of the absolute difference between the corrected and corrected_adata: {np.std(abs_diff)}")
-        print(f"Maximum absolute difference between the corrected and corrected_adata: {np.max(abs_diff)}")
-        print(f"Minimum absolute difference between the corrected and corrected_adata: {np.min(abs_diff)}")
-        print(f"Sum of the absolute difference between the corrected and corrected_adata: {np.sum(abs_diff)}")
-    return corrected_adata
+def evaluate_correction(adata, clients, test_clients, global_model, test_batches, batch_key, cell_key, output):
+    print(" Centralized correction of data")
+    centrally_corrected = global_model.model.batch_removal(adata, batch_key=batch_key, cell_label_key=cell_key,
+                                                           return_latent=True)
+    single_plot(centrally_corrected, batch_key, cell_key, output, "_centrally_corrected.png")
+    print("Evaluating the performance of the batch effect correction Without new studies...")
+    mlg = post_training_correction_wf(clients)
+    fed_corrected = global_model.remove_batch_effect(adata, mlg)
+    fed_corrected.write(f"{output}/fed_corrected.h5ad")
+    single_plot(fed_corrected, batch_key, cell_key, output, "_fed_corrected.png")
+    if len(test_clients) > 0:
+        print("Evaluating the performance of the batch effect correction With new studies...")
+        for client in test_clients:
+            client.model.load_state_dict(global_model.model.state_dict())
+            clients.append(client)
+        mlg = post_training_correction_wf(clients)
+        fed_corrected_with_new_studies = global_model.remove_batch_effect(adata, mlg)
+        fed_corrected_with_new_studies.write(f"{output}/fed_corrected_with_new_studies.h5ad")
+        abs_diff = abs_diff_centrally_corrected(centrally_corrected, fed_corrected, fed_corrected_with_new_studies)
+        abs_diff.to_csv(f"{output}/abs_diff.csv", sep=",", index=False)
+        single_plot(fed_corrected_with_new_studies, batch_key, cell_key, output, "_fed_corrected_with_new_studies.png")
 
 
-def federated_evaluation(plot_func, clients, global_model, test_adata, test_batches):
-    """
-    Since plotting a private test data can happen in real world and relies on global cell average, we implement
-    it in federated fashion We assume only one client has a test data, however, with the same fashion we can
-    extend it to more clients.
-
-    Parameters
-    ----------
-    plot_func
-    clients
-    global_model
-    test_adata
-    test_batches
-
-    Returns
-    -------
-
-    """
-
+def post_training_correction_wf(clients):
     batch_sizes = {}
+    print("First round: finding dominant batches...")
     for client_id, client in enumerate(clients):
         batch_sizes[client_id] = client.find_batch_size()
     global_cell_sizes = aggregate_batch_sizes(batch_sizes)
-    global_cell_avg = {}
+    print("Second round: finding mean latent genes of dominant batches per cell type...")
+    mean_latent_genes = {}
     for i, c in global_cell_sizes.items():
         c_avg = clients[i].avg_local_cells(c)
-        global_cell_avg.update(c_avg)
-    plot_func(uncorrected=test_adata,
-              corrected=global_model.remove_batch_effect(test_adata, global_cell_avg),
-              umap_directory=f"{args.output}/{translate(str(test_batches))}/testset")
-    return global_cell_avg
+        mean_latent_genes.update(c_avg)
+    return mean_latent_genes
+
 
 if __name__ == '__main__':
     """
@@ -193,13 +149,13 @@ if __name__ == '__main__':
     3 clients: put 1 batches out
     2 clients: put 2 batches out
     """
-    defalt_root = "/home/bba1658"
+    default_root = "/home/bba1658"
     parser = argparse.ArgumentParser()
     parser.add_argument("--init_model_path", type=str,
-                        default=f"{defalt_root}/FedScGen/models/centralized/HumanPancreas")
-    parser.add_argument("--adata", type=str, default=f"{defalt_root}/FedScGen/data/datasets/HumanPancreas.h5ad")
+                        default=f"{default_root}/FedScGen/models/centralized/HumanPancreas")
+    parser.add_argument("--adata", type=str, default=f"{default_root}/FedScGen/data/datasets/HumanPancreas.h5ad")
     parser.add_argument("--output", type=str,
-                        default=f"{defalt_root}/FedScGen/results/scgen/federated/HumanPancreas/all/BO0-C5")
+                        default=f"{default_root}/FedScGen/results/scgen/federated/HumanPancreas/all/BO0-C5")
     parser.add_argument("--epoch", type=int, default=1)
     parser.add_argument("--cell_key", type=str, default="cell_type")
     parser.add_argument("--batch_key", type=str, default="batch")
