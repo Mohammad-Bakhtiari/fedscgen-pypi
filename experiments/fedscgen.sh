@@ -13,7 +13,7 @@ GPU="${8:-1}"
 BATCH_SIZE="${9:-50}"
 SNAPSHOT="${10:true}"
 
-
+GPU=1
 # DATASET is H5AD_FILE without the extension
 DATASET=$(echo "$H5AD_FILE" | cut -f 1 -d '.')
 
@@ -55,7 +55,7 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
         --init_model_path "${root_dir}/models/${DATASET}" \
         --adata "$raw" \
         --output  "$output"\
-        --epoch 5 \
+        --epoch 3 \
         --cell_key "cell_type" \
         --batch_key "batch" \
         --batches "$BATCHES" \
@@ -68,7 +68,15 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
         --n_clients "$n_clients" \
         --remove_cell_types "$REMOVE_CELL_TYPES" \
         --gpu "$GPU" \
-        --n_rounds 10 \
+        --n_rounds 2   \
         $combine_flag \
         $snapshot_flag
+
+    while IFS= read -r -d '' corrected
+    do
+      echo -e "\e[33mPCA on $corrected\e[0m \n "
+      python "${root_dir}/scripts/pca_reduction_simple.py" --path "$corrected" \
+        --n_components 20 \
+        --output_dir "$corrected"
+    done < <(find "$output" -name '*.h5ad' -print0)
 done
