@@ -15,26 +15,71 @@ from statsmodels.stats.multitest import multipletests
 from sklearn.metrics import silhouette_score
 import pandas as pd
 
+HEX_COLORS = [
+    '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
+    '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#1a55FF', '#55a868',
+    '#c44e52', '#8172b3', '#ccb974', '#64B5CD', '#FFB447', '#82C341',
+    '#D17049', '#705696', '#FF69B4', '#BA55D3', '#CD5C5C', '#FFA07A',
+    '#B0E0E6', '#FFD700', '#F08080', '#90EE90', '#20B2AA', '#778899',
+    '#00FA9A', '#6B8E23', '#FF00FF', '#4682B4', '#008080', '#40E0D0',
+    '#EE82EE', '#F4A460', '#DAA520', '#8B008B', '#800080', '#191970',
+    '#000080', '#808000', '#FFFF00', '#00FF00', '#00FFFF', '#FF4500',
+    '#FF6347', '#FFD700', '#FFA500', '#FF4500', '#DC143C', '#FF0000',
+    '#B22222', '#8B0000', '#FFC0CB', '#FFB6C1', '#FF69B4', '#FF1493',
+    '#C71585', '#DB7093', '#FFA07A', '#FF7F50', '#FF6347', '#FF4500',
+    '#FF8C00', '#FFD700', '#FFFF00', '#ADFF2F', '#7FFF00', '#7CFC00',
+    '#00FF00', '#32CD32', '#98FB98', '#00FA9A', '#00FF7F', '#3CB371',
+    '#2E8B57', '#228B22', '#008000', '#006400', '#9ACD32', '#6B8E23',
+    '#808000', '#556B2F', '#66CDAA', '#8FBC8F', '#20B2AA', '#008B8B',
+    '#008080', '#00FFFF', '#00FFFF', '#E0FFFF', '#AFEEEE', '#7FFFD4',
+    '#40E0D0', '#48D1CC', '#00CED1', '#5F9EA0', '#4682B4', '#6495ED',
+    '#00BFFF', '#1E90FF', '#4169E1', '#0000FF', '#0000CD', '#00008B',
+    '#000080', '#191970', '#FFF8DC', '#FFEBCD', '#FFE4C4', '#FFDEAD',
+    '#F5DEB3', '#DEB887', '#D2B48C', '#BC8F8F', '#F4A460', '#DAA520',
+    '#B8860B', '#CD853F', '#D2691E', '#8B4513', '#A0522D', '#A52A2A',
+    '#800000', '#FFFFFF', '#FFFAFA', '#F0FFF0', '#F5FFFA', '#F0FFFF',
+    '#F0F8FF', '#F8F8FF', '#F5F5F5', '#FFF5EE', '#F5F5DC', '#FDF5E6',
+    '#FFFAF0', '#FFFFF0', '#FAEBD7', '#FAF0E6', '#FFF0F5', '#FFE4E1',
+]
+
+DATASETS = ["HumanDendriticCells",
+            "MouseCellAtlas",
+            "HumanPancreas",
+            "PBMC",
+            "CellLine",
+            "MouseRetina",
+            "MouseBrain",
+            "MouseHematopoieticStemProgenitorCells"
+            ]
+
+MODELS = ["Raw", "ScGen", "FedScGen"]
+MODEL_COLORS = {k: v for k, v in zip(MODELS, sns.color_palette("viridis", 3))}
+
+MINORITY_CLASSES = [
+    "",
+    "Epithelial,Dendritic,Smooth-muscle,NK",
+    "stellate,endothelial,mesenchymal,macrophage,mast,epsilon,schwann,t_cell,MHC class II",
+    "Plasmacytoid dendritic cell,Megakaryocyte,Hematopoietic stem cell",
+    "",
+    "ganglion,vascular_endothelium,horizontal,fibroblasts,microglia,pericytes,astrocytes",
+    "Olfactory ensheathing cells,Choroid_plexus,Mitotic",
+    "MPP,LTHSC,LMPP,Unsorted"
+]
+
 
 def plot_metrics_with_circles(df, plot_name):
     # Seaborn settings
     sns.set(style="whitegrid")
 
-    fig, ax = plt.subplots(1, 1, figsize=(8, 8))
-
-    # Turn off grid lines
-    ax.grid(False)
-
     # Get unique metrics and datasets
     metric_keys = df.columns[2:].tolist()
     dataset_keys = df['Dataset'].unique().tolist()
+    fig, ax = plt.subplots(1, 1, figsize=(len(dataset_keys), len(metric_keys)))
 
-    # Sort to make sure the order is correct
-    metric_keys.sort()
-    dataset_keys.sort()
-
+    # Turn off grid lines
+    ax.grid(False)
     # Define some colors, assuming up to three datasets
-    colors = sns.color_palette("husl", len(dataset_keys))
+    colors = sns.color_palette("viridis", len(dataset_keys))
 
     y_labels = []
 
@@ -66,7 +111,8 @@ def plot_metrics_with_circles(df, plot_name):
     # plt.title("Metrics Represented by Circles")
     plt.xlim([0, len(dataset_keys)])
     plt.ylim([0, len(metric_keys)])
-    plt.savefig(plot_name)
+    plt.tight_layout()
+    plt.savefig(plot_name, dpi=300)
     plt.close()
 
 
@@ -367,3 +413,60 @@ def knn_accuracy(latent_adata, cell_key, k=15):
     final_avg_accuracy = np.mean(avg_accuracies)
 
     return final_avg_accuracy
+
+
+def bar_plot_subplot(df, plot_name):
+    """
+    In 10 rows for 10 communication rounds and 3 columns for NMI, ARI, and EBM bar plot the values for 10 epochs
+    Parameters
+    find scgen in approach and plot it in horizontal line
+    ----------
+    df
+    plot_name
+
+    Returns
+    -------
+
+    """
+    sns.set(style="whitegrid")
+    fig, ax = plt.subplots(3, 10, figsize=(30, 9))
+    max_value = [df['NMI'].max(), df['ARI'].max(), df['EBM'].max()]
+    min_values = [df['NMI'].min(), df['ARI'].min(), df['EBM'].min()]
+    scgen = df[df['Approach'] == "scGen"]
+    df = df[df['Approach'] != "scGen"]
+    df.drop(columns=["Approach"], inplace=True)
+    for i, metric in enumerate(["NMI", "ARI", "EBM"]):
+        for round in range(1, 11):
+            target_ax = ax[i, round - 1]
+            data = df[df['Round'] == round]
+            sns.barplot(x="Epoch", y=metric, data=data, ax=target_ax, palette="viridis")
+            target_ax.axhline(scgen[metric].values[0], color='r', linestyle='--')
+
+            target_ax.set_ylabel("")
+            target_ax.set_xlabel("")
+            target_ax.set_ylim(np.floor(min_values[i] * 10) / 10, np.ceil(max_value[i] * 10) / 10)
+
+            if round == 1:
+                target_ax.set_ylabel(f"{metric}", fontsize=22)
+                # show only three ticks
+                target_ax.set_yticks([np.floor(min_values[i] * 10) / 10, np.ceil(max_value[i] * 10) / 10])
+                target_ax.set_yticklabels([np.floor(min_values[i] * 10) / 10, np.ceil(max_value[i] * 10) / 10],
+                                          fontsize=18)
+                if i < 2:
+                    target_ax.axes.get_xaxis().set_visible(False)
+            if i == 2:
+                target_ax.set_xticks([0, 4, 9])
+                # target_ax.set_xlabel(f"{round}", fontsize=22)
+                target_ax.set_xticklabels(['E1', 'E5', 'E10'], fontsize=16)
+                target_ax.set_xlabel(f"Round {round}", fontsize=20)
+                # if round == 5:
+                #     target_ax.set_xlabel(f"Rounds", fontsize=30)
+            if round > 1:
+                target_ax.axes.get_yaxis().set_visible(False)
+                if i < 2:
+                    target_ax.axes.get_xaxis().set_visible(False)
+
+    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.1, hspace=0.1)
+
+    plt.savefig(plot_name, dpi=300, bbox_inches='tight')
+    plt.close()
