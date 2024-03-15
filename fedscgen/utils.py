@@ -580,3 +580,14 @@ def set_w(model, weights):
     for name, param in model.named_parameters():
         if name in weights:
             param.data.copy_(weights[name].to(param.device))
+
+
+def abs_diff_centrally_corrected(centrally_corrected, fed_corrected, fed_corrected_with_new_studies):
+    abs_diff = np.abs(centrally_corrected.X - fed_corrected.X)
+    row_1 = {"Mean": np.mean(abs_diff), "Standard deviation": np.std(abs_diff), "Maximum": np.max(abs_diff),
+             "Minimum": np.min(abs_diff), "Sum": np.sum(abs_diff)}
+    abs_diff = np.abs(centrally_corrected.X - fed_corrected_with_new_studies.X)
+    row_2 = {"Mean": np.mean(abs_diff), "Standard deviation": np.std(abs_diff), "Maximum": np.max(abs_diff),
+             "Minimum": np.min(abs_diff), "Sum": np.sum(abs_diff)}
+    df = pd.DataFrame([row_1, row_2], index=["Without new studies", "With new studies"])
+    return df
