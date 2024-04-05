@@ -17,5 +17,5 @@ echo "Running scgen with batch out"
 ./scgen-with-batch-out.sh 'HumanPancreas.h5ad' '' false false "0,1,2,3,4"
 
 
-
+echo "Running centralized classification using corrected data by scGen and FedscGen"
 ./run-classification.sh
