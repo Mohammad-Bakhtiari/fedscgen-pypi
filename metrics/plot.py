@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import itertools
 import argparse
 from utils import DATASETS_COLORS, DATASETS_MARKERS
+import glob
 
 
 def read_metrics_files(data_dir, filename="metrics.csv"):
@@ -143,6 +144,7 @@ def plot_tuning_heatmap(dataset_keys, df, metric_keys, plot_name, scGen):
     cbar.ax.tick_params(labelsize=14)
     plt.savefig(plot_name, dpi=300)
 
+
 def plot_bo_hitmap(df, plt_name, dpi, font_size=20, tick_size=14, cell_size=1, cbar_font_size=14, tick_label_size=26):
     # Determine the figure size based on the number of columns and rows
     num_cols, num_rows = df.shape
@@ -150,7 +152,7 @@ def plot_bo_hitmap(df, plt_name, dpi, font_size=20, tick_size=14, cell_size=1, c
     fig_height = cell_size * num_cols
 
     # Plotting the heatmap
-    fig = plt.figure(figsize=(fig_width+3, fig_height+3))
+    fig = plt.figure(figsize=(fig_width + 3, fig_height + 3))
     fig.subplots_adjust(left=0.05, right=0.8, top=0.95, bottom=0.2, wspace=0.01, hspace=0.01)
     plt.grid(False)
     abs_max = max(abs(df.values.min()), abs(df.values.max()))
@@ -316,6 +318,7 @@ def acceptance_diff_plot(df, plot_name):
     plt.savefig(plot_name, dpi=1000)
     plt.close()
 
+
 def read_kbet_file(hp_kbet_file):
     kbet_df = pd.read_csv(hp_kbet_file)
     kbet_df.drop(columns=["Unnamed: 0", "filename"], inplace=True)
@@ -448,6 +451,7 @@ def read_scenarios_metrics(data_dir):
     cbar.ax.tick_params(labelsize=20)
     plt.savefig(os.path.join(data_dir, "datasets-metrics-scenarios.png"), dpi=300)
 
+
 def read_datasets_metrics(data_dir):
     # df = get_scenario_metrics_diff(data_dir, inclusion="all")
     # df.to_csv(os.path.join(data_dir, "datasets-metrics-all.csv"), index=False)
@@ -475,7 +479,6 @@ def read_datasets_metrics(data_dir):
     cbar = plt.colorbar(mappable, cax=cbar_ax)
     cbar.ax.tick_params(labelsize=24)
     plt.savefig(os.path.join(data_dir, "datasets-metrics-all.png"), dpi=300)
-
 
 
 def get_scenario_metrics_diff(data_dir, inclusion, skip_datasets=None):
@@ -508,9 +511,92 @@ def get_scenario_metrics_diff(data_dir, inclusion, skip_datasets=None):
     return metric
 
 
+def get_classification_accuracy(data_dir):
+    dfs = []
+    for filename in glob.glob(data_dir + "/classification_acc_*.csv"):
+        df = pd.read_csv(filename, index_col=None, header=0)
+        mean_df = df.groupby('Epoch').mean().reset_index()
+        dfs.append(mean_df)
+    if len(dfs) == 0:
+        return None
+    result = pd.concat(dfs, axis=0, ignore_index=True)
+    dir_mean_acc_by_epoch = result.groupby('Epoch')['Accuracy'].mean()
+    dir_mean_auc_by_epoch = result.groupby('Epoch')['AUC'].mean()
+
+    # Get highest accuracy and its corresponding epoch
+    max_acc_epoch = dir_mean_acc_by_epoch.idxmax()
+    max_acc = dir_mean_acc_by_epoch.max()
+
+    # Get highest AUC and its corresponding epoch
+    max_auc_epoch = dir_mean_auc_by_epoch.idxmax()
+    max_auc = dir_mean_auc_by_epoch.max()
+    return max_acc_epoch, max_acc, max_auc_epoch, max_auc
+
+
+def read_classification(data_dir):
+    columns = ['Dataset', 'Inclusion', 'Model', "Batch Out", 'Approach', 'Max Accuracy', 'Max Accuracy Epoch',
+               'Max AUC', 'Max AUC Epoch']
+    results_df = pd.DataFrame(columns=columns)
+
+    for dataset, acr in zip(DATASETS, DATASETS_ACRONYM):
+        for model in ["mlp-norm", "knn"]:
+            for approach in ["scGen", "FedscGen"]:
+                if approach == "scgen":
+                    r_dir = os.path.join(data_dir, "centralized", dataset, "all", "classification", model)
+                else:
+                    n_clients = 5 if dataset == "HumanPancreas" else 3 if dataset == "CellLine" else 2
+                    r_dir = os.path.join(data_dir, "federated", dataset, "all", f"BO0-C{n_clients}", "classification",
+                                         model)
+
+                metrics = get_classification_accuracy(r_dir)
+                if metrics:
+                    max_acc_epoch, max_acc, max_auc_epoch, max_auc = metrics
+                else:
+                    raise FileNotFoundError(f"Metrics file not found in {r_dir}")
+
+                row = pd.DataFrame([{
+                    'Dataset': acr,
+                    'Inclusion': "all",
+                    "Model": "MLP" if model == "mlp-norm" else model.upper(),
+                    'Approach': approach,
+                    'Max Accuracy': max_acc,
+                    'Max Accuracy Epoch': max_acc_epoch,
+                    'Max AUC': max_auc,
+                    'Max AUC Epoch': max_auc_epoch
+                }]
+                )
+                results_df = pd.concat([results_df, row], ignore_index=True)
+        break
+    print(results_df.head(len(results_df)))
+    results_df.to_csv(os.path.join(data_dir, "latent_acc_diff.csv"))
+
+    # Assuming 'grouped_acc' is your DataFrame
+    sns.set(style="whitegrid", context="talk")
+    unique_models = results_df["Model"].unique()
+    print(unique_models)
+
+    fig, axes = plt.subplots(1, len(unique_models), figsize=(12, 6))
+    for i, model in enumerate(unique_models):
+        model_df = results_df[results_df["Model"] == model]
+        ax = sns.barplot(data=model_df, x='Dataset', y='Max Accuracy', hue='Approach', palette='viridis', ax=axes[i])
+        ax.set_title(model)
+        ax.set_xlabel('Dataset')
+        ax.set_ylabel('Accuracy')
+        ax.tick_params(axis='x', rotation=45)
+        ax.get_legend().remove()  # Remove the legend from each subplot
+
+    # Create a single horizontal legend outside the subplots
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.0), ncol=len(labels))
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust the layout
+    plt.savefig(os.path.join(data_dir, "latent_accuracy.png"), dpi=300)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("Plot lineplot for the metrics")
-    parser.add_argument('--scenario', type=str, choices=['datasets', 'tuning', 'batchout', 'kbet-diff', "scenarios"],
+    parser.add_argument('--scenario', type=str, choices=['datasets', 'tuning', 'batchout', 'kbet-diff',
+                                                         "scenarios", "classification"],
                         default='datasets')
     parser.add_argument('--data_dir', type=str, help='data directory')
     parser.add_argument('--bo_metrics_file', type=str,
@@ -529,8 +615,11 @@ if __name__ == '__main__':
     elif args.scenario == "kbet-diff":
         read_kbet(args.data_dir)
     elif args.scenario == "batchout":
-        read_batchout(args.bo_metrics_file, args.hp_kbet_file, args.bo_kbet_dir, args.all_ds_metrics_file, args.output_dir)
+        read_batchout(args.bo_metrics_file, args.hp_kbet_file, args.bo_kbet_dir, args.all_ds_metrics_file,
+                      args.output_dir)
     elif args.scenario == "scenarios":
         read_scenarios_metrics(args.data_dir)
     elif args.scenario == "datasets":
         read_datasets_metrics(args.data_dir)
+    elif args.scenario == "classification":
+        read_classification(args.data_dir)
