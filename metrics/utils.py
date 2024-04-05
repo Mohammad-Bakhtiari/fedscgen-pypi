@@ -51,10 +51,11 @@ DATASETS = ["HumanDendriticCells",
             "MouseBrain",
             "MouseHematopoieticStemProgenitorCells"
             ]
-
+DATASETS_ACRONYM = ["HDC", "MCA", "HP", "PBMC", "CL", "MR", "MB", "MHSPC"]
 MODELS = ["Raw", "ScGen", "FedScGen"]
 MODEL_COLORS = {k: v for k, v in zip(MODELS, sns.color_palette("viridis", 3))}
-
+DATASETS_COLORS = {k: v for k, v in zip(DATASETS_ACRONYM, sns.color_palette("viridis", 8))}
+DATASETS_MARKERS = {k: v for k, v in zip(DATASETS_ACRONYM, ['o', 's', '^', 'p', 'D', 'v', '*', 'H'])}
 MINORITY_CLASSES = [
     "",
     "Epithelial,Dendritic,Smooth-muscle,NK",
