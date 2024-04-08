@@ -20,7 +20,8 @@ Modifications made to the original work are licensed under the Apache License, V
 Original work is licensed under the BSD 3-Clause License.
 
 """
-
+import __init__
+from fedscgen.utils import seed_worker
 from anndata import AnnData
 from scarches.models.scgen.vaearith import vaeArith
 from scarches.trainers.scgen.trainer import vaeArithTrainer
@@ -119,9 +120,11 @@ class CustomTrainer(vaeArithTrainer):
         valid_dataset = AnndataDataset(valid_data)
 
         # Create DataLoaders
-        self.train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=4,
-                                       drop_last=True)
-        self.valid_loader = DataLoader(valid_dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=4)
+        self.train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=self.shuffle,
+                                       worker_init_fn=seed_worker,
+                                       num_workers=4, drop_last=True)
+        self.valid_loader = DataLoader(valid_dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=4,
+                                       worker_init_fn=seed_worker)
 
     def train(self, n_epochs=100, lr=0.001, eps=1e-8, **extras_kwargs):
         """
@@ -166,10 +169,7 @@ class CustomTrainer(vaeArithTrainer):
                 train_loss += loss.item()
             # self.model.eval()
             self.on_epoch_end()
-
-            valid_loss = 0
-            train_loss_end_epoch = 0
-            self.validate(train_loss_end_epoch, valid_loss)
+            self.validate()
 
             if not self.check_early_stop():
                 break
@@ -179,7 +179,7 @@ class CustomTrainer(vaeArithTrainer):
             print("Best State was in Epoch", self.best_epoch)
             self.model.load_state_dict(self.best_state_dict)
 
-    def validate(self, train_loss_end_epoch, valid_loss):
+    def validate(self):
         """
         Validate the ScGen model using PyToch Dataloaders.
         Parameters
@@ -246,6 +246,7 @@ class CustomVAEArith(vaeArith):
     reconstruct(data, use_data: bool)
         Map back the latent space encoding via the decoder.
     """
+
     def __init__(self, x_dim: int, **kwargs):
         super().__init__(x_dim, **kwargs)
 
@@ -254,20 +255,12 @@ class CustomVAEArith(vaeArith):
          feed data in encoder part of VAE and compute the latent space coordinates for each sample in data.
         """
         print("Getting latent space coordinates...")
-        batch_size = 256
-
         if not torch.is_tensor(data):
             data = torch.tensor(data)
         data = data.to(next(self.encoder.parameters()).device)
-        data_loader = DataLoader(TensorDataset(data), batch_size=batch_size, shuffle=False)
-        latent_list = []
-        with torch.no_grad():  # Turn off gradients for the following block
-            for batch_data, in data_loader:
-                mu, logvar = self.encoder(batch_data)
-                latent = self._sample_z(mu, logvar)
-                latent_list.append(latent)
-
-        latent = torch.cat(latent_list, dim=0)
+        with torch.no_grad():
+            mu, logvar = self.encoder(data)
+            latent = self._sample_z(mu, logvar)
         return latent
 
     def reconstruct(self, data, use_data=False) -> torch.Tensor:
@@ -275,7 +268,6 @@ class CustomVAEArith(vaeArith):
 
         """
         print("Reconstructing data...")
-        batch_size = 256
         if not torch.is_tensor(data):
             data = torch.tensor(data)
 
@@ -283,16 +275,9 @@ class CustomVAEArith(vaeArith):
             latent = data
         else:
             latent = self.get_latent(data)
-
-        reconstructed_data_list = []
-        latent_dataloader = DataLoader(TensorDataset(latent), batch_size=batch_size, shuffle=False)
+        latent = latent.to(next(self.decoder.parameters()).device)
         with torch.no_grad():
-            for batch_latent, in latent_dataloader:
-                batch_latent = batch_latent.to(next(self.decoder.parameters()).device)
-                rec_batch = self.decoder(batch_latent)
-                reconstructed_data_list.append(rec_batch)
-        rec_data = torch.cat(reconstructed_data_list, dim=0)
-        return rec_data
+            return self.decoder(latent)
 
 
 class CustomScGen(sca.models.scgen):
