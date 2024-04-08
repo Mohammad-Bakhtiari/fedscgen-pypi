@@ -44,6 +44,9 @@ python plot.py --scenario "batchout" \
 python plot.py --scenario "scenarios" \
   --data_dir "${root_dir}/results/scgen/federated"
 
+python plot.py --scenario "datasets" \
+  --data_dir "${root_dir}/results/scgen/federated"
+
 python plot.py --scenario "kbet-diff" \
   --data_dir "${root_dir}/results/scgen/federated"
 
