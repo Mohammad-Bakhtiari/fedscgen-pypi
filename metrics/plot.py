@@ -333,10 +333,10 @@ def read_kbet_file(hp_kbet_file):
 
 
 def read_batchout(bo_metrics_file, hp_kbet_file, bo_kbet_dir, all_ds_metrics_file, output_dir):
-    # hp = get_hp_metrics_kbet_diff(all_ds_metrics_file, hp_kbet_file)
-    # difference_df = get_bo_metrics_kbet_diff(bo_kbet_dir, bo_metrics_file)
-    # difference_df = pd.concat([difference_df, hp])
-    # difference_df.to_csv(f"{output_dir}/bo-metrics.csv", index=True)
+    hp = get_hp_metrics_kbet_diff(all_ds_metrics_file, hp_kbet_file)
+    difference_df = get_bo_metrics_kbet_diff(bo_kbet_dir, bo_metrics_file)
+    difference_df = pd.concat([difference_df, hp])
+    difference_df.to_csv(f"{output_dir}/bo-metrics.csv", index=True)
     difference_df = pd.read_csv(f"{output_dir}/bo-metrics.csv")
     difference_df.set_index("Batch Out", inplace=True)
     plot_bo_hitmap(difference_df, f"{output_dir}/bo-hitmap.png", dpi=300)
@@ -453,11 +453,9 @@ def read_scenarios_metrics(data_dir):
 
 
 def read_datasets_metrics(data_dir):
-    # df = get_scenario_metrics_diff(data_dir, inclusion="all")
-    # df.to_csv(os.path.join(data_dir, "datasets-metrics-all.csv"), index=False)
+    df = get_scenario_metrics_diff(data_dir, inclusion="all")
+    df.to_csv(os.path.join(data_dir, "datasets-metrics-all.csv"), index=False)
     df = pd.read_csv(os.path.join(data_dir, "datasets-metrics-all.csv"))
-    print(df)
-    exit()
     df.set_index("Dataset", inplace=True)
     df.drop(columns=["inclusion"], inplace=True)
     fig, axs = plt.subplots(1, 1, figsize=(15, 14), squeeze=True)
@@ -489,12 +487,9 @@ def get_scenario_metrics_diff(data_dir, inclusion, skip_datasets=None):
         if skip_datasets:
             if dataset in skip_datasets:
                 continue
-        if dataset == "MouseBrain":
-            kbet_df[acr] = None
-        else:
-            n_clients = 5 if dataset == "HumanPancreas" else 3 if dataset == "CellLine" else 2
-            kbet_file = os.path.join(data_dir, dataset, inclusion, f"BO0-C{n_clients}", "kBET_summary_results.csv")
-            kbet_df[acr] = read_kbet_file(kbet_file)
+        n_clients = 5 if dataset == "HumanPancreas" else 3 if dataset == "CellLine" else 2
+        kbet_file = os.path.join(data_dir, dataset, inclusion, f"BO0-C{n_clients}", "kBET_summary_results.csv")
+        kbet_df[acr] = read_kbet_file(kbet_file)
     kbet_df = pd.DataFrame(data=kbet_df.values(), columns=["kBET"], index=kbet_df.keys())
     metrics_df = pd.read_csv(os.path.join(data_dir, f"fed_cent_metrics-{inclusion}.csv"))
     if inclusion != "all":
