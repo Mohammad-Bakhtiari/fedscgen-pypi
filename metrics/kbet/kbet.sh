@@ -6,14 +6,10 @@ scenarios=("datasets", "batch-out")
 parent_dir="$(dirname "$PWD")"
 root_dir="$(dirname "$parent_dir")"
 
-#INCLUSION=("all" "dropped" "combined")
-INCLUSION=("dropped")
+INCLUSION=("all" "dropped" "combined")
 DATASETS=("HumanDendriticCells" "MouseCellAtlas" "HumanPancreas" "PBMC" "CellLine" "MouseRetina" "MouseBrain" "MouseHematopoieticStemProgenitorCells")
-#DROPPED_DATASETS=("MouseCellAtlas" "HumanPancreas" "PBMC" "MouseRetina" "MouseBrain" "MouseHematopoieticStemProgenitorCells")
-DROPPED_DATASETS=("MouseHematopoieticStemProgenitorCells" "MouseBrain" "MouseRetina" "PBMC" "HumanPancreas" "MouseCellAtlas" "HumanDendriticCells")
+DROPPED_DATASETS=("MouseCellAtlas" "HumanPancreas" "PBMC" "MouseRetina" "MouseBrain" "MouseHematopoieticStemProgenitorCells")
 
-#DATASETS=("HumanDendriticCells" "MouseCellAtlas" "HumanPancreas" "PBMC" "CellLine" "MouseRetina" "MouseHematopoieticStemProgenitorCells")
-#DROPPED_DATASETS=("MouseCellAtlas" "HumanPancreas" "PBMC" "MouseRetina" "MouseHematopoieticStemProgenitorCells")
 
 
 if [[ "${scenario}" == "datasets" ]]; then
@@ -35,7 +31,7 @@ if [[ "${scenario}" == "datasets" ]]; then
       scgen="${root_dir}/results/scgen/centralized/${DATASETS[$index]}/${T}/corrected.h5ad"
       fedscgen="${root_dir}/results/scgen/federated/${DATASETS[$index]}/${T}/BO0-C${n_clients}/fed_corrected.h5ad"
       echo "Running kbet_calculator.R for ${DATASETS[$index]} ${T}"
-      Rscript kbet_calculator.R "${scgen}" "${fedscgen}" "${output_dir}"
+      Rscript kbet_calculator.R "${scgen}" "${fedscgen}" "${output_dir}" "${DATASETS[$index]}"
     done
   done
 fi

@@ -7,6 +7,7 @@ if (length(args) < 3) {
 scgen <- args[1]
 fedscgen <- args[2]
 output_dir= args[3]
+dataset_name = args[4]
 
 files <- c(scgen=scgen, fedscgen=fedscgen)
 
@@ -39,7 +40,13 @@ for(name in names(files)) {
   print(name)
   adata <- read_h5ad(files[name])
   ds_size <- nrow(adata$X)
-  k <- c(0.05, 0.10, 0.15, 0.20, 0.25)
+  if (dataset_name == "MouseBrain") {
+    k <- c(0.001)
+  }
+  else {
+    k <- c(0.05, 0.10, 0.15, 0.20, 0.25)
+  }
+
   # Check the type and value of ds_size
   print(paste("ds_size type:", class(ds_size)))
   print(paste("ds_size value:", ds_size))
