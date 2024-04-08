@@ -95,6 +95,9 @@ def main(args):
                 single_plot(corrected_adata, args.batch_key, args.cell_key,
                             f"{args.output}/{translate(str(test_batches))}",
                             f"corrected_{r}.png")
+        for client in clients:
+            client.set_weights(global_weights)
+            client.model.eval()
         if not args.per_round_snapshots:
             global_model.model.load_state_dict(global_weights)
             output_dir = f"{args.output}/{translate(str(test_batches))}"
@@ -115,17 +118,20 @@ def evaluate_correction(adata, clients, test_clients, global_model, test_batches
     fed_corrected = global_model.remove_batch_effect(adata, mlg)
     fed_corrected.write(f"{output}/fed_corrected.h5ad")
     single_plot(fed_corrected, batch_key, cell_key, output, "_fed_corrected.png")
+    fed_corrected_with_new_studies = None
     if len(test_clients) > 0:
         print("Evaluating the performance of the batch effect correction With new studies...")
         for client in test_clients:
             client.model.load_state_dict(global_model.model.state_dict())
+            client.is_trained_ = True
+            client.model.eval()
             clients.append(client)
         mlg = post_training_correction_wf(clients)
         fed_corrected_with_new_studies = global_model.remove_batch_effect(adata, mlg)
         fed_corrected_with_new_studies.write(f"{output}/fed_corrected_with_new_studies.h5ad")
-        abs_diff = abs_diff_centrally_corrected(centrally_corrected, fed_corrected, fed_corrected_with_new_studies)
-        abs_diff.to_csv(f"{output}/abs_diff.csv", sep=",", index=False)
         single_plot(fed_corrected_with_new_studies, batch_key, cell_key, output, "_fed_corrected_with_new_studies.png")
+    abs_diff = abs_diff_centrally_corrected(centrally_corrected, fed_corrected, fed_corrected_with_new_studies)
+    abs_diff.to_csv(f"{output}/abs_diff.csv", sep=",", index=True)
 
 
 def post_training_correction_wf(clients):
