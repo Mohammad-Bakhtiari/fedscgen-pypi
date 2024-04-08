@@ -297,6 +297,7 @@ class FedScGen(ScGen):
         state_dict: dict
             The weights of the model
         """
-        for name, param in self.model.named_parameters():
-            if name in state_dict:
-                param.data.copy_(state_dict[name].to(param.device))
+        with torch.no_grad():
+            for name, param in self.model.named_parameters():
+                if name in state_dict:
+                    param.data.copy_(state_dict[name].to(param.device))
