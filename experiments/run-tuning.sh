@@ -3,7 +3,7 @@
 chmod +x fedscgen_tuning.sh
 
 echo "hyperparameter tuning for including all cell types and batches"
-DATASETS=(HumanDendriticCells MouseCellAtlas HumanPancreas PBMC CellLine MouseRetina MouseBrain MouseHematopoieticStemProgenitorCells)
+DATASETS=(HumanDendriticCells MouseCellAtlas HumanPancreas PBMC CellLine MouseRetina MouseHematopoieticStemProgenitorCells)
 for ds in "${DATASETS[@]}";do
   echo "Running hyperparameter tuning for $ds"
   batches="0,1"
