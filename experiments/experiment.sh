@@ -8,9 +8,9 @@ chmod +x run-tuning.sh
 echo "Running tuning"
 ./run-tuning.sh
 
-chmod +x run_fedscgen.sh
+chmod +x run-fedscgen.sh
 echo "Running fedscgen"
-./run_fedscgen.sh
+./run-fedscgen.sh
 
 chmod +x scgen-with-batch-out.sh
 echo "Running scgen with batch out"
