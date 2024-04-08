@@ -1,3 +1,11 @@
+import random
+
+SEED = 42
+random.seed(SEED)
+import numpy as np
+
+np.random.seed(SEED)
+
 import os
 from collections import Counter
 import shutil
@@ -5,7 +13,6 @@ import anndata
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-import numpy as np
 from sklearn.model_selection import KFold
 from torch.utils.data import DataLoader, TensorDataset, ConcatDataset
 import torch
@@ -15,7 +22,6 @@ from sklearn.preprocessing import LabelEncoder, QuantileTransformer, StandardSca
 from sklearn.model_selection import StratifiedKFold
 from sklearn.decomposition import PCA
 import ast
-import scanpy as sc
 import torch.nn.functional as F
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score, roc_auc_score
@@ -24,14 +30,29 @@ from sklearn.cluster import KMeans
 from itertools import combinations
 import copy
 
+torch.manual_seed(SEED)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(SEED)
+
+
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2 ** 32
+    np.random.seed(worker_seed + SEED)
+    random.seed(worker_seed + SEED)
+    torch.manual_seed(worker_seed + SEED)
+
 
 def get_cuda_device(device_index: int):
-    return torch.device(f"cuda:{device_index}" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        torch.cuda.set_device(device_index)  # Set the device globally
+        return torch.device(f"cuda:{device_index}")
+    else:
+        return torch.device("cpu")
 
 
 def combine_test_loaders(loaders):
     combined_dataset = ConcatDataset([dl.dataset for dl in loaders])
-    return DataLoader(combined_dataset, batch_size=32, shuffle=True)
+    return DataLoader(combined_dataset, batch_size=32, shuffle=True, worker_init_fn=seed_worker, num_workers=4)
 
 
 class Data:
@@ -348,11 +369,13 @@ def instantiate_model(input_size, n_classes, lr, init_model, model_name, hidden_
 def load_dataloaders(x_train, y_train, x_test, y_test, batch_size=32):
     # Convert the data to PyTorch tensors and create DataLoader objects
     train_dataset = TensorDataset(torch.tensor(x_train), torch.tensor(y_train))
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True, num_workers=4)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True,
+                              worker_init_fn=seed_worker, num_workers=4)
     test_loader = None
     if len(x_test) > 0:
         val_dataset = TensorDataset(torch.tensor(x_test), torch.tensor(y_test))
-        test_loader = DataLoader(val_dataset, batch_size=batch_size, drop_last=True, num_workers=4)
+        test_loader = DataLoader(val_dataset, batch_size=batch_size, drop_last=True, worker_init_fn=seed_worker,
+                                 num_workers=4)
     return test_loader, train_loader
 
 
@@ -512,7 +535,8 @@ def aggregate_batch_sizes(batch_sizes: dict):
     for client_id, batch in batch_sizes.items():
         for cell_type, size in batch.items():
             if cell_type in max_client:
-                if size > max_client[cell_type]:
+                dominant_batch_size = batch_sizes[max_client[cell_type]][cell_type]
+                if size > dominant_batch_size:
                     max_client[cell_type] = client_id
             else:
                 max_client[cell_type] = client_id
@@ -584,10 +608,13 @@ def set_w(model, weights):
 
 def abs_diff_centrally_corrected(centrally_corrected, fed_corrected, fed_corrected_with_new_studies):
     abs_diff = np.abs(centrally_corrected.X - fed_corrected.X)
-    row_1 = {"Mean": np.mean(abs_diff), "Standard deviation": np.std(abs_diff), "Maximum": np.max(abs_diff),
-             "Minimum": np.min(abs_diff), "Sum": np.sum(abs_diff)}
-    abs_diff = np.abs(centrally_corrected.X - fed_corrected_with_new_studies.X)
-    row_2 = {"Mean": np.mean(abs_diff), "Standard deviation": np.std(abs_diff), "Maximum": np.max(abs_diff),
-             "Minimum": np.min(abs_diff), "Sum": np.sum(abs_diff)}
-    df = pd.DataFrame([row_1, row_2], index=["Without new studies", "With new studies"])
+    rows = [{"Mean": np.mean(abs_diff), "Standard deviation": np.std(abs_diff), "Maximum": np.max(abs_diff),
+             "Minimum": np.min(abs_diff), "Sum": np.sum(abs_diff)}]
+    indices = ["Without new studies"]
+    if fed_corrected_with_new_studies is not None:
+        abs_diff = np.abs(centrally_corrected.X - fed_corrected_with_new_studies.X)
+        rows.append({"Mean": np.mean(abs_diff), "Standard deviation": np.std(abs_diff), "Maximum": np.max(abs_diff),
+                     "Minimum": np.min(abs_diff), "Sum": np.sum(abs_diff)})
+        indices.append("With new studies")
+    df = pd.DataFrame(rows, index=indices)
     return df
