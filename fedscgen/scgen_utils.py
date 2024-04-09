@@ -257,10 +257,22 @@ class CustomVAEArith(vaeArith):
         print("Getting latent space coordinates...")
         if not torch.is_tensor(data):
             data = torch.tensor(data)
-        data = data.to(next(self.encoder.parameters()).device)
-        with torch.no_grad():
-            mu, logvar = self.encoder(data)
-            latent = self._sample_z(mu, logvar)
+        if len(data) < 100000:
+            data = data.to(next(self.encoder.parameters()).device)
+            with torch.no_grad():
+                mu, logvar = self.encoder(data)
+                latent = self._sample_z(mu, logvar)
+            return latent
+        for i in range(0, len(data), 1000):
+            data_ = data[i:i + 1000]
+            data_ = data_.to(next(self.encoder.parameters()).device)
+            with torch.no_grad():
+                mu, logvar = self.encoder(data_)
+                latent_ = self._sample_z(mu, logvar)
+            if i == 0:
+                latent = latent_
+            else:
+                latent = torch.cat((latent, latent_), 0)
         return latent
 
     def reconstruct(self, data, use_data=False) -> torch.Tensor:
@@ -275,9 +287,19 @@ class CustomVAEArith(vaeArith):
             latent = data
         else:
             latent = self.get_latent(data)
-        latent = latent.to(next(self.decoder.parameters()).device)
-        with torch.no_grad():
-            return self.decoder(latent)
+        if len(latent) < 100000:
+            latent = latent.to(next(self.decoder.parameters()).device)
+            with torch.no_grad():
+                return self.decoder(latent)
+        for i in range(0, len(latent), 1000):
+            latent_ = latent[i:i + 1000]
+            latent_ = latent_.to(next(self.decoder.parameters()).device)
+            with torch.no_grad():
+                if i == 0:
+                    reconstructions = self.decoder(latent_)
+                else:
+                    reconstructions = torch.cat((reconstructions, self.decoder(latent_)), 0)
+        return reconstructions
 
 
 class CustomScGen(sca.models.scgen):
