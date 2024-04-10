@@ -32,6 +32,7 @@ from torch.utils.data import Dataset, DataLoader, TensorDataset
 import torch
 from scipy import sparse
 import scarches as sca
+import numpy as np
 
 TORCH_DTYPE = torch.float32
 
@@ -291,14 +292,12 @@ class CustomVAEArith(vaeArith):
             latent = latent.to(next(self.decoder.parameters()).device)
             with torch.no_grad():
                 return self.decoder(latent)
-        for i in range(0, len(latent), 1000):
-            latent_ = latent[i:i + 1000]
+        for i in range(0, len(latent), 100):
+            latent_ = latent[i:i + 100]
             latent_ = latent_.to(next(self.decoder.parameters()).device)
             with torch.no_grad():
-                if i == 0:
-                    reconstructions = self.decoder(latent_)
-                else:
-                    reconstructions = torch.cat((reconstructions, self.decoder(latent_)), 0)
+                rec = self.decoder(latent_)
+                reconstructions = rec if i == 0 else torch.cat((reconstructions, rec), 0)
         return reconstructions
 
 
