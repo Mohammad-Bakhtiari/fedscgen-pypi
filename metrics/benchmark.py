@@ -48,10 +48,12 @@ def benchmark(adata, latent_adata, batch_key, cell_key, approach):
     return common_metrics
 
 
-def benchmark_nmi_ari_ebm(adata, latent_adata, batch_key, cell_key, epoch, round, approach):
+def tuning_metrics(adata, latent_adata, batch_key, cell_key, epoch, round, approach):
     nmi_value = nmi(latent_adata, cell_key)
     ari_value = ari_score(adata, cell_key)
     ebm_value = entropy_batch_mixing(adata, batch_key, n_neighbors=15)
+    asw_b, asw_c = asw(latent_adata, cell_key, batch_key)
+    knn_acc_value = knn_accuracy(latent_adata, cell_key)
     common_metrics = {
         'Approach': approach,
         'Epoch': epoch,
@@ -59,17 +61,6 @@ def benchmark_nmi_ari_ebm(adata, latent_adata, batch_key, cell_key, epoch, round
         'NMI': nmi_value,
         'ARI': ari_value,
         'EBM': ebm_value,
-    }
-    return common_metrics
-
-
-def benchmark_ASW_KNN(latent_adata, batch_key, cell_key, epoch, round, approach):
-    asw_b, asw_c = asw(latent_adata, cell_key, batch_key)
-    knn_acc_value = knn_accuracy(latent_adata, cell_key)
-    common_metrics = {
-        'Approach': approach,
-        'Epoch': epoch,
-        'Round': round,
         'KNN Acc': knn_acc_value,
         'ASW_B': asw_b,
         'ASW_C': asw_c
@@ -192,53 +183,16 @@ def benchmark_tuning(data_dir, n_components, batch_key, cell_key):
             latent_adata = anndata.AnnData(adata.obsm[f'pca_{n_components}'])
             latent_adata.obs = adata.obs
             all_metrics.append(
-                benchmark_nmi_ari_ebm(adata, latent_adata, batch_key, cell_key, epoch, round, 'FedscGen'))
+                tuning_metrics(adata, latent_adata, batch_key, cell_key, epoch, round, 'FedscGen'))
     # add scGen
     adata = anndata.read_h5ad(os.path.join(data_dir, "scGen.h5ad"))
     latent_adata = anndata.AnnData(adata.obsm[f'pca_{n_components}'])
     latent_adata.obs = adata.obs
-    all_metrics.append(benchmark_nmi_ari_ebm(adata, latent_adata, batch_key, cell_key, 0, 0, f"scGen"))
+    all_metrics.append(tuning_metrics(adata, latent_adata, batch_key, cell_key, 0, 0, f"scGen"))
     df = pd.DataFrame(all_metrics)
     plot_name = os.path.join(data_dir, "metrics.png")
     df.to_csv(os.path.join(data_dir, "metrics.csv"), sep=",", index=False)
     bar_plot_subplot(df, plot_name)
-
-
-def benchmark_tuning_complmenetary(data_dir, n_components, batch_key, cell_key):
-    """
-    benchmark all files in the tuning directory
-    Returns
-    -------
-
-    """
-    h5ad_files = {}
-    for epoch in range(1, 11):
-        files = {}
-        for round in range(1, 11):
-            files[round] = os.path.join(data_dir, f"E{epoch}", f"corrected_{round}.h5ad")
-        files = sorted(files.items(), key=lambda x: x[0])
-        h5ad_files[epoch] = files
-    sorted_files = sorted(h5ad_files.items(), key=lambda x: x[0])
-    df = pd.read_csv(os.path.join(data_dir, "metrics.csv"))
-    for epoch, file in sorted_files:
-        for round, path in file:
-            adata = anndata.read_h5ad(path)
-            latent_adata = anndata.AnnData(adata.obsm[f'pca_{n_components}'])
-            latent_adata.obs = adata.obs
-            benchmark = benchmark_ASW_KNN(latent_adata, batch_key, cell_key, epoch, round, 'FedscGen')
-            # add new metrics to the dataframe
-            df.loc[(df['Epoch'] == epoch) & (df['Round'] == round), 'KNN Acc'] = benchmark['KNN Acc']
-            df.loc[(df['Epoch'] == epoch) & (df['Round'] == round), 'ASW_B'] = benchmark['ASW_B']
-            df.loc[(df['Epoch'] == epoch) & (df['Round'] == round), 'ASW_C'] = benchmark['ASW_C']
-    # add scGen
-    adata = anndata.read_h5ad(os.path.join(data_dir, "scGen.h5ad"))
-    latent_adata = anndata.AnnData(adata.obsm[f'pca_{n_components}'])
-    latent_adata.obs = adata.obs
-    benchmark = benchmark_ASW_KNN(latent_adata, batch_key, cell_key, 0, 0, f"scGen")
-    df.loc[df["Approach"] == "scGen", 'KNN Acc'] = benchmark['KNN Acc']
-    df.loc[df["Approach"] == "scGen", 'ASW_B'] = benchmark['ASW_B']
-    df.loc[df["Approach"] == "scGen", 'ASW_C'] = benchmark['ASW_C']
-    df.to_csv(os.path.join(data_dir, "complemented_metrics.csv"), sep=",", index=False)
 
 
 def load_metrics_and_plot(df_path, plot_name):
@@ -282,6 +236,5 @@ if __name__ == "__main__":
                                 args.cell_key)
         elif args.scenarios == "tuning":
             benchmark_tuning(args.data_dir, args.n_components, args.batch_key, args.cell_key)
-            benchmark_tuning_complmenetary(args.data_dir, args.n_components, args.batch_key, args.cell_key)
         else:
             benchmark_snapshots(args.data_dir, args.n_rounds, args.n_components, args.batch_key, args.cell_key)
