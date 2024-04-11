@@ -52,17 +52,19 @@ fi
 # Hyperparameter tuning rounds & epochs
 if [ "$scenario" = "tuning" ]; then
   for dataset in "${!DATASETS[@]}"; do
+    if [ "${DATASETS[$dataset]}" = "MouseBrain" ]; then
+      continue
+    fi
     target_dir="${root_dir}//results/scgen/federated/param-tuning/${DATASETS[$dataset]}"
     echo "Running benchmark for param tuning of FedScGen for ${DATASETS[$dataset]}"
     # Copy corrected files by ScGen
-#    cp "${root_dir}/results/scgen/centralized/${DATASETS[$dataset]}/all/corrected.h5ad" "${target_dir}/scGen.h5ad"
+    cp "${root_dir}/results/scgen/centralized/${DATASETS[$dataset]}/all/corrected.h5ad" "${target_dir}/scGen.h5ad"
 
     python benchmark.py --data_dir "${target_dir}" \
     --scenarios "${scenario}" \
     --inclusion "all" \
     --cell_key "cell_type" \
     --n_components 20 &
-#    cp "${target_dir}/metrics.png" "${root_dir}/results/scgen/federated/param-tuning/metrics/${DATASETS[$dataset]}.png"
   done
   wait
 fi
