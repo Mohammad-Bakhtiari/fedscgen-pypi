@@ -269,9 +269,9 @@ def wilcoxon_bh_test(df):
 
 def read_tuning_res(data_dir, read_all=False):
     if read_all:
-        df = read_metrics_files(args.data_dir, filename="complemented_metrics.csv")
-        df.to_csv(os.path.join(args.data_dir, "all_complemented_metrics.csv"), index=False)
-    df = pd.read_csv(os.path.join(data_dir, "all_complemented_metrics.csv"))
+        df = read_metrics_files(args.data_dir, filename="metrics.csv")
+        df.to_csv(os.path.join(args.data_dir, "all_metrics.csv"), index=False)
+    df = pd.read_csv(os.path.join(data_dir, "all_metrics.csv"))
     metric_keys = ["ARI", "NMI", "EBM", "ASW_B", "ASW_C", "KNN Acc"]
     plot_name = os.path.join(data_dir, "tuning-diff.png")
     scGen = df[df["Approach"] == "scGen"]
@@ -606,7 +606,7 @@ if __name__ == '__main__':
     parser.add_argument("--output_dir", type=str, help="Path to the output directory.")
     args = parser.parse_args()
     if args.scenario == "tuning":
-        read_tuning_res(args.data_dir)
+        read_tuning_res(args.data_dir, True)
     elif args.scenario == "kbet-diff":
         read_kbet(args.data_dir)
     elif args.scenario == "batchout":
