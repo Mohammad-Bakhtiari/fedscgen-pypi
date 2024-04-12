@@ -47,6 +47,6 @@ if [[ "${scenario}" == "batch-out" ]]; then
     fedscgen="${root_dir}/results/scgen/federated/HumanPancreas/all/BO1-C4/${bo}/fed_corrected_with_new_studies.h5ad"
     output_dir="${root_dir}/results/scgen/federated/HumanPancreas/all/BO1-C4/${bo}"
     echo "Running kbet_calculator.R for HumanPancreas batchout ${bo}"
-    Rscript kbet_calculator.R "${scgen}" "${fedscgen}" "${output_dir}"
+    Rscript kbet_calculator.R "${scgen}" "${fedscgen}" "${output_dir}" "HumanPancreas"
   done
 fi
