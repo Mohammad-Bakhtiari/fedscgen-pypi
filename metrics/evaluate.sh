@@ -18,8 +18,9 @@ chmod +x evaluate.sh
 echo "Running lisi for raw data, and corrected data by scGen and FedscGen"
 ./evaluate.sh "datasets"
 
+cd ..
 echo "plotting LISI results for raw, scGen, and FedscGen on all datasets"
-python box_plot.py --data _dir "${root_dir}/results/scgen/federated"
+python plot.py --scenario "lisi" --data_dir "${root_dir}/results/scgen/federated"
 
 cd "${root_dir}/metrics/kbet"
 chmod +x kbet.sh
