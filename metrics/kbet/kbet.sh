@@ -31,9 +31,10 @@ if [[ "${scenario}" == "datasets" ]]; then
       scgen="${root_dir}/results/scgen/centralized/${DATASETS[$index]}/${T}/corrected.h5ad"
       fedscgen="${root_dir}/results/scgen/federated/${DATASETS[$index]}/${T}/BO0-C${n_clients}/fed_corrected.h5ad"
       echo "Running kbet_calculator.R for ${DATASETS[$index]} ${T}"
-      Rscript kbet_calculator.R "${scgen}" "${fedscgen}" "${output_dir}" "${DATASETS[$index]}"
+      Rscript kbet_calculator.R "${scgen}" "${fedscgen}" "${output_dir}" "${DATASETS[$index]}" &
     done
   done
+  wait
 fi
 
 
