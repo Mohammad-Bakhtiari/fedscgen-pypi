@@ -55,7 +55,7 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
         --init_model_path "${root_dir}/models/${DATASET}" \
         --adata "$raw" \
         --output  "$output"\
-        --epoch 3 \
+        --epoch 2 \
         --cell_key "cell_type" \
         --batch_key "batch" \
         --batches "$BATCHES" \
@@ -68,7 +68,7 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
         --n_clients "$n_clients" \
         --remove_cell_types "$REMOVE_CELL_TYPES" \
         --gpu "$GPU" \
-        --n_rounds 2   \
+        --n_rounds 10   \
         $combine_flag \
         $snapshot_flag
 
