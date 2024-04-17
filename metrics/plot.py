@@ -116,7 +116,8 @@ def plot_tuning_heatmap(dataset_keys, df, metric_keys, plot_name, scGen):
             max_value_diff = data.loc[max_index, metric]
 
             pivot = data.pivot(index='Epoch', columns='Round', values=metric)
-            abs_max = max(abs(pivot.min().min()), abs(pivot.max().max()))
+            # abs_max = max(abs(pivot.min().min()), abs(pivot.max().max()))
+            abs_max = 1
             cmap = 'RdBu'
             sns.heatmap(pivot, ax=ax, cmap=cmap, cbar=False, center=0, vmin=-abs_max, vmax=abs_max, square=True)
             ax.text(best_round - 0.5, best_epoch - 0.5, f"{max_value_diff:.2f}", ha='center', va='center', fontsize=12)
@@ -155,7 +156,8 @@ def plot_bo_hitmap(df, plt_name, dpi, font_size=20, tick_size=14, cell_size=1, c
     fig = plt.figure(figsize=(fig_width + 3, fig_height + 3))
     fig.subplots_adjust(left=0.05, right=0.8, top=0.95, bottom=0.2, wspace=0.01, hspace=0.01)
     plt.grid(False)
-    abs_max = max(abs(df.values.min()), abs(df.values.max()))
+    # abs_max = max(abs(df.values.min()), abs(df.values.max()))
+    abs_max = 0.5
     ax = sns.heatmap(df, annot=True, cmap='RdBu', vmin=-abs_max, vmax=abs_max, center=0, annot_kws={"size": 26},
                      square=True, cbar=False)
     plt.xticks(fontsize=tick_size)
@@ -416,6 +418,7 @@ def read_scenarios_metrics(data_dir):
     abs_max = max([abs(df.drop(columns=["Dataset", "inclusion"]).min().min()),
                    abs(df.drop(columns=["Dataset", "inclusion"]).max().max())]
                   )
+    abs_max = 1
     norm = colors.Normalize(vmin=-abs_max, vmax=abs_max)
     cmap = cm.get_cmap('RdBu')
     mappable = cm.ScalarMappable(norm=norm, cmap=cmap)
@@ -428,7 +431,8 @@ def read_scenarios_metrics(data_dir):
             j += 1
         ax = axs[j][i]
 
-        sns.heatmap(subset, annot=True, cmap='RdBu', center=0, ax=ax, cbar=False, annot_kws={"size": 16}, square=True)
+        sns.heatmap(subset, annot=True, cmap='RdBu', center=0, ax=ax, cbar=False, annot_kws={"size": 16}, square=True,
+                    vmin=-abs_max, vmax=abs_max)
         ax.set_title(dataset, fontsize=30)
         ax.grid(False)
         if i == 0:
@@ -463,6 +467,7 @@ def read_datasets_metrics(data_dir):
     abs_max = max([abs(df.min().min()),
                    abs(df.max().max())]
                   )
+    abs_max = 1
     sns.heatmap(df, annot=True, cmap='RdBu', center=0, ax=axs, cbar=False, annot_kws={"size": 28}, square=True,
                 vmin=-abs_max, vmax=abs_max)
     axs.set_title("Performance difference: FedscGen - scGen", fontsize=36)
