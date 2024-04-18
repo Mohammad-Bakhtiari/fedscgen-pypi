@@ -14,7 +14,10 @@ import itertools
 import argparse
 from utils import DATASETS_COLORS, DATASETS_MARKERS
 import glob
+import random
 
+np.random.seed(42)
+random.seed(42)
 
 def read_metrics_files(data_dir, filename="metrics.csv"):
     """ find all files named as `metrics.csv` in the data_dir and read them into a single dataframe

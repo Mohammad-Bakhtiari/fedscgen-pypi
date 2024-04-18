@@ -5,6 +5,8 @@ if (length(args) < 3) {
   stop("Please provide the directory path containing the .h5ad files.")
 }
 
+set.seed(42)
+
 # Directory path
 raw <- args[1]
 scgen <- args[2]

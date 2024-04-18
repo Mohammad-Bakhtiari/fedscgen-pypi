@@ -4,6 +4,8 @@ if (length(args) < 3) {
   stop("Please provide the directory path containing the .h5ad files.")
 }
 
+set.seed(42)
+
 scgen <- args[1]
 fedscgen <- args[2]
 output_dir= args[3]

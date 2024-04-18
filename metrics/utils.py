@@ -14,6 +14,10 @@ from scipy.stats import wilcoxon
 from statsmodels.stats.multitest import multipletests
 from sklearn.metrics import silhouette_score
 import pandas as pd
+import random
+# Set seeds
+np.random.seed(42)
+random.seed(42)
 
 HEX_COLORS = [
     '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',

@@ -6,6 +6,11 @@ import os
 from scarches.metrics import nmi, entropy_batch_mixing, asw
 from utils import (graph_connectivity_score, isolated_label_f1_score, ari_score, bar_plot, plot_metrics_with_circles,
                    compute_ils, knn_accuracy, DATASETS, bar_plot_subplot)
+import random
+
+# Set seeds
+np.random.seed(42)
+random.seed(42)
 
 
 def calculate_and_plot_metrics(adata_dict, batch_key, cell_key, plot_name, overwrite=False, n_components=50):
@@ -126,6 +131,37 @@ def benchmark_all_datasets(fed_data_dir: str, cent_data_dir: str, inclusion: str
     df.to_csv(os.path.join(fed_data_dir, f"fed_cent_metrics-{inclusion}.csv"), sep=",", index=False)
 
 
+def benchmark_reproduce(fed_data_dir: str, cent_data_dir: str, inclusion: str, n_components: int, batch_key: str,
+                        cell_key: str):
+    all_metrics = []
+    for i_ in range(2):
+        ds_name = "HumanDendriticCells"
+        inclusion = "all"
+        n_clients = 5 if ds_name == "HumanPancreas" else 3 if ds_name == "CellLine" else 2
+        fedscgen = anndata.read_h5ad(
+            os.path.join(fed_data_dir, ds_name, inclusion, f"BO0-C{n_clients}", "fed_corrected.h5ad"))
+        latent_adata = anndata.AnnData(fedscgen.obsm[f'pca_{n_components}'])
+        latent_adata.obs = fedscgen.obs
+        fedscgen_metrics = benchmark(fedscgen, latent_adata, batch_key, cell_key, "FedscGen")
+        scgen = anndata.read_h5ad(os.path.join(cent_data_dir, ds_name, inclusion, "corrected.h5ad"))
+        latent_adata = anndata.AnnData(scgen.obsm[f'pca_{n_components}'])
+        latent_adata.obs = scgen.obs
+        scgen_metrics = benchmark(scgen, latent_adata, batch_key, cell_key, "scGen")
+        all_metrics.extend([fedscgen_metrics, scgen_metrics])
+    df = pd.read_csv(os.path.join(fed_data_dir, f"reproduce-{ds_name}.csv"), sep=",", index_col=False)
+    pd.concat([df, pd.DataFrame(all_metrics)]).to_csv(os.path.join(fed_data_dir, f"reproduce-{ds_name}.csv"), sep=",",
+                                                      index=False)
+    print(df)
+    exit()
+    # plot range of values for each metric and for both methods
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    sns.boxplot(data=df, x="Metric", y="Value", hue="Approach")
+    plt.savefig(os.path.join(fed_data_dir, f"reproduce-{ds_name}.png"))
+    plt.close()
+    # df.to_csv(os.path.join(fed_data_dir, f"reproduce-f{ds_name}.csv"), sep=",", index=False)
+
+
 def benchmark_batch_out(fed_data_dir, cent_data_dir, n_batches, n_components, batch_key, cell_key):
     """
 
@@ -214,7 +250,7 @@ if __name__ == "__main__":
     parser.add_argument('--cell_key', help='Cell key name.', default="cell_type")
     parser.add_argument('--batch_key', help='Batch key name.', default="batch")
     parser.add_argument("--scenarios", type=str, default="all",
-                        choices=["datasets", "batch-out", "snapshots", "tuning"])
+                        choices=["datasets", "batch-out", "snapshots", "tuning", "reproduce"])
     parser.add_argument("--n_rounds", type=int, default=10, help="Number of rounds for snapshots")
     parser.add_argument("--n_batches", type=int, default=10, help="Number of batches for batch-out")
     parser.add_argument("--plot_only", action="store_true", default=False, help="Plot the metrics")
@@ -236,5 +272,8 @@ if __name__ == "__main__":
                                 args.cell_key)
         elif args.scenarios == "tuning":
             benchmark_tuning(args.data_dir, args.n_components, args.batch_key, args.cell_key)
+        elif args.scenarios == "reproduce":
+            benchmark_reproduce(args.fed_data_dir, args.data_dir, args.inclusion, args.n_components, args.batch_key,
+                                args.cell_key)
         else:
             benchmark_snapshots(args.data_dir, args.n_rounds, args.n_components, args.batch_key, args.cell_key)
