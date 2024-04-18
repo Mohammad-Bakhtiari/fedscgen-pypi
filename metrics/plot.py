@@ -98,8 +98,10 @@ def plot_tuning_heatmap(dataset_keys, df, metric_keys, plot_name, scGen):
     fig, axs = plt.subplots(len(metric_keys), len(dataset_keys),
                             figsize=(len(dataset_keys) * 4, len(df['Epoch'].unique()) * 2),
                             squeeze=True)
+    fig.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1, wspace=0.01, hspace=0.01)
     # Ensure symmetric vmin and vmax for color normalization around zero
     max_abs_value = max(abs(df[metric_keys].min().min()), abs(df[metric_keys].max().max()))
+    max_abs_value = 1
     norm = colors.Normalize(vmin=-max_abs_value, vmax=max_abs_value)
     cmap = cm.get_cmap('RdBu')
     mappable = cm.ScalarMappable(norm=norm, cmap=cmap)
@@ -279,7 +281,6 @@ def read_tuning_res(data_dir, read_all=False):
     scGen = df[df["Approach"] == "scGen"]
     df = df[df["Approach"] == "FedscGen"]
     df.drop(columns=["Approach"], inplace=True)
-
     dataset_keys = df['Dataset'].unique().tolist()
     find_best_round_epoch(dataset_keys, copy.deepcopy(df), metric_keys, scGen)
     plot_tuning_heatmap(dataset_keys, df, metric_keys, plot_name, scGen)
@@ -432,7 +433,7 @@ def read_scenarios_metrics(data_dir):
         ax = axs[j][i]
 
         sns.heatmap(subset, annot=True, cmap='RdBu', center=0, ax=ax, cbar=False, annot_kws={"size": 16}, square=True,
-                    vmin=-abs_max, vmax=abs_max)
+                    vmin=-abs_max, vmax=abs_)
         ax.set_title(dataset, fontsize=30)
         ax.grid(False)
         if i == 0:
@@ -462,8 +463,8 @@ def read_datasets_metrics(data_dir):
     df = pd.read_csv(os.path.join(data_dir, "datasets-metrics-all.csv"))
     df.set_index("Dataset", inplace=True)
     df.drop(columns=["inclusion"], inplace=True)
-    fig, axs = plt.subplots(1, 1, figsize=(15, 14), squeeze=True)
-    fig.subplots_adjust(left=0.2, right=0.9, top=0.9, bottom=0.1, wspace=0.01, hspace=0.01)
+    fig, axs = plt.subplots(1, 1, figsize=(16, 14), squeeze=True)
+    fig.subplots_adjust(left=0.15, right=0.9, top=0.9, bottom=0.1, wspace=0.01, hspace=0.01)
     abs_max = max([abs(df.min().min()),
                    abs(df.max().max())]
                   )
@@ -678,7 +679,7 @@ if __name__ == '__main__':
     parser.add_argument("--output_dir", type=str, help="Path to the output directory.")
     args = parser.parse_args()
     if args.scenario == "tuning":
-        read_tuning_res(args.data_dir, True)
+        read_tuning_res(args.data_dir, False)
     elif args.scenario == "kbet-diff":
         read_kbet(args.data_dir)
     elif args.scenario == "batchout":
