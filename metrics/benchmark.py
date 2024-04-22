@@ -17,6 +17,7 @@ from fedscgen.utils import set_seed
 
 set_seed()
 
+
 def calculate_and_plot_metrics(adata_dict, batch_key, cell_key, plot_name, overwrite=False, n_components=50):
     metric_file = plot_name.replace(".png", ".csv")
     if os.path.exists(metric_file) and not overwrite:
