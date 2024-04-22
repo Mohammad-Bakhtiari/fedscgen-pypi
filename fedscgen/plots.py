@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from functools import partial
 import matplotlib.lines as mlines
 
+
 def umap_plot(data, wspace, plt_name, batch_key, cell_label_key, use_rep=None):
     batch_color_dict, cell_color_dict = gen_color_dict(batch_key, cell_label_key, data)
     if use_rep:
