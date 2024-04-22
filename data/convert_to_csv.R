@@ -1,4 +1,6 @@
 library(Matrix)
+set.seed(42)
+
 filename <- "./dataset8/dropviz_and_nuclei_combined_filtered_UMI.RDS"
 # Read the RDS file
 data <- readRDS(filename)

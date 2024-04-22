@@ -1,10 +1,7 @@
 import random
 
 SEED = 42
-random.seed(SEED)
 import numpy as np
-
-np.random.seed(SEED)
 
 import os
 from collections import Counter
@@ -30,9 +27,16 @@ from sklearn.cluster import KMeans
 from itertools import combinations
 import copy
 
-torch.manual_seed(SEED)
-if torch.cuda.is_available():
-    torch.cuda.manual_seed_all(SEED)
+
+def set_seed(seed=SEED):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
+set_seed(SEED)
 
 
 def seed_worker(worker_id):

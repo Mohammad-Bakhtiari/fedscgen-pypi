@@ -10,7 +10,10 @@ parent_dir = str(Path(__file__).resolve().parent.parent)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 from fedscgen.plots import umap_plot, tsne_plot
+from fedscgen.utils import set_seed
 from scipy.io import mmread
+
+set_seed()
 
 
 def normalize(adata, mtx=False):
