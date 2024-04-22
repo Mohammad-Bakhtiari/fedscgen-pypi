@@ -6,12 +6,16 @@ import os
 from scarches.metrics import nmi, entropy_batch_mixing, asw
 from utils import (graph_connectivity_score, isolated_label_f1_score, ari_score, bar_plot, plot_metrics_with_circles,
                    compute_ils, knn_accuracy, DATASETS, bar_plot_subplot)
-import random
+import sys
+from pathlib import Path
 
-# Set seeds
-np.random.seed(42)
-random.seed(42)
+# Add the parent directory to sys.path
+parent_dir = str(Path(__file__).resolve().parent.parent)
+if parent_dir not in sys.path:
+    sys.path.append(parent_dir)
+from fedscgen.utils import set_seed
 
+set_seed()
 
 def calculate_and_plot_metrics(adata_dict, batch_key, cell_key, plot_name, overwrite=False, n_components=50):
     metric_file = plot_name.replace(".png", ".csv")

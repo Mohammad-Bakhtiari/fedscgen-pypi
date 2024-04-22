@@ -14,10 +14,17 @@ import itertools
 import argparse
 from utils import DATASETS_COLORS, DATASETS_MARKERS
 import glob
-import random
+import sys
+from pathlib import Path
 
-np.random.seed(42)
-random.seed(42)
+# Add the parent directory to sys.path
+parent_dir = str(Path(__file__).resolve().parent.parent)
+if parent_dir not in sys.path:
+    sys.path.append(parent_dir)
+from fedscgen.utils import set_seed
+
+set_seed()
+
 
 def read_metrics_files(data_dir, filename="metrics.csv"):
     """ find all files named as `metrics.csv` in the data_dir and read them into a single dataframe
@@ -682,7 +689,7 @@ if __name__ == '__main__':
     parser.add_argument("--output_dir", type=str, help="Path to the output directory.")
     args = parser.parse_args()
     if args.scenario == "tuning":
-        read_tuning_res(args.data_dir, False)
+        read_tuning_res(args.data_dir, True)
     elif args.scenario == "kbet-diff":
         read_kbet(args.data_dir)
     elif args.scenario == "batchout":
