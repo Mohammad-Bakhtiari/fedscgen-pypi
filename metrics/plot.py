@@ -563,7 +563,8 @@ def read_classification(data_dir):
                 if metrics:
                     max_acc_epoch, max_acc, max_auc_epoch, max_auc = metrics
                 else:
-                    raise FileNotFoundError(f"Metrics file not found in {r_dir}")
+                    print(f"Metrics file not found in {r_dir}")
+                    continue
 
                 row = pd.DataFrame([{
                     'Dataset': acr,
@@ -577,7 +578,6 @@ def read_classification(data_dir):
                 }]
                 )
                 results_df = pd.concat([results_df, row], ignore_index=True)
-        break
     print(results_df.head(len(results_df)))
     results_df.to_csv(os.path.join(data_dir, "latent_acc_diff.csv"))
 
