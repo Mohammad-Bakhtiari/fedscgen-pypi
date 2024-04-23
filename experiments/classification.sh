@@ -5,6 +5,8 @@ DATASET=$2
 BATCH_OUT=$3
 REMOVE_CELL_TYPES=$4
 MODEL=$5
+BATCH_SIZE=$6
+GPU=$7
 
 IFS=',' read -ra BATCH_OUT_OPTIONS <<< "$BATCH_OUT_OPTIONS_STRING"
 #IFS=',' read -ra MODELS <<< "$MODELS"
@@ -72,5 +74,7 @@ for config_key in "scgen" "fedscgen"; do
       --norm_method $NORM_METHOD \
       --model "$MODEL" \
       --hidden_size "$HIDDEN_SIZE" \
-      --batch_out "$BATCH_OUT"
+      --batch_out "$BATCH_OUT" \
+      --batch_size $BATCH_SIZE \
+      --gpu $GPU
 done
