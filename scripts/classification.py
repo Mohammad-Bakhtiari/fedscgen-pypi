@@ -5,7 +5,7 @@ import random
 random.seed(42)
 
 from fedscgen.utils import to_csv, plot_metrics, encode_labels, normalize_data, classify_celltypes, custom_kfold,\
-    remove_cell_types, combine_cell_types
+    remove_cell_types, combine_cell_types, get_cuda_device
 from sklearn.model_selection import StratifiedKFold
 import pandas as pd
 import numpy as np
@@ -15,7 +15,7 @@ import torch
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 
-def cross_validate(x, y, epochs, batch_size, lr, output_dir, model, hidden_size, batches, batch_out, init_model=None):
+def cross_validate(x, y, epochs, batch_size, lr, output_dir, model, hidden_size, batches, batch_out, init_model=None, device='cpu'):
     y = encode_labels(y)
     n_classes = len(np.unique(y))
 
@@ -29,7 +29,7 @@ def cross_validate(x, y, epochs, batch_size, lr, output_dir, model, hidden_size,
     for fold, (train_ind, test_ind) in enumerate(kf, 1):
         x_train, y_train, x_test, y_test = x[train_ind], y[train_ind], x[test_ind], y[test_ind]
         metrics = classify_celltypes(x_train, y_train, x_test, y_test, epochs, lr, batch_size, n_classes, init_model,
-                                     model, hidden_size)
+                                     model, hidden_size, device)
 
         filename = os.path.join(output_dir, f"classification_acc_{fold}.csv")
         df = to_csv(*metrics, filename)
@@ -69,8 +69,10 @@ if __name__ == '__main__':
                         help='Normalization method: "log", "quantile", "z_score", "min_max", or "tpm".')
     parser.add_argument("--batch_out", type=int, default=0)
     parser.add_argument("--combine", action='store_true', default=False)
+    parser.add_argument("--gpu", type=int, default=0)
 
     args = parser.parse_args()
+    args.device = get_cuda_device(args.gpu)
     if args.model == "mlp-norm":
         args.init_model_path = args.init_model_path.replace("mlp", f"mlp-{args.hidden_size}")
     args.hidden_size = [int(num) for num in args.hidden_size.split(",")]
@@ -100,5 +102,6 @@ if __name__ == '__main__':
                    model=args.model,
                    hidden_size=args.hidden_size,
                    batches=adata.obs[args.batch_key],
-                   batch_out=args.batch_out
+                   batch_out=args.batch_out,
+                   device=args.device
                    )
