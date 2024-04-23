@@ -1,8 +1,5 @@
 import __init__
 import os
-import random
-
-random.seed(42)
 
 from fedscgen.utils import to_csv, plot_metrics, encode_labels, normalize_data, classify_celltypes, custom_kfold,\
     remove_cell_types, combine_cell_types, get_cuda_device
