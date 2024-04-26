@@ -32,7 +32,6 @@ from torch.utils.data import Dataset, DataLoader, TensorDataset
 import torch
 from scipy import sparse
 import scarches as sca
-import numpy as np
 
 TORCH_DTYPE = torch.float32
 
@@ -81,7 +80,7 @@ class CustomTrainer(vaeArithTrainer):
 
     """
 
-    def __init__(self, model, adata, train_frac: float = 0.9, batch_size=32, shuffle=True,
+    def __init__(self, model, adata, train_frac: float = 0.9, batch_size=32, shuffle=False,
                  early_stopping_kwargs: dict = {
                      "early_stopping_metric": "val_loss",
                      "threshold": 0,
@@ -146,7 +145,6 @@ class CustomTrainer(vaeArithTrainer):
 
         self.optim = torch.optim.Adam(
             params, lr=lr, eps=eps)  # consider changing the param. like weight_decay, eps, etc.
-
         loss_hist = []
 
         for self.epoch in range(self.n_epochs):
@@ -250,6 +248,29 @@ class CustomVAEArith(vaeArith):
 
     def __init__(self, x_dim: int, **kwargs):
         super().__init__(x_dim, **kwargs)
+
+    def _sample_z(self, mu: torch.Tensor, log_var: torch.Tensor) -> torch.Tensor:
+        """
+            Samples from standard Normal distribution with shape [size, z_dim] and
+            applies re-parametrization trick. It is actually sampling from latent
+            space distributions with N(mu, var) computed by the Encoder.
+
+        Parameters
+            ----------
+        mean:
+        Mean of the latent Gaussian
+            log_var:
+        Standard deviation of the latent Gaussian
+            Returns
+            -------
+        Returns Torch Tensor containing latent space encoding of 'x'.
+        The computed Tensor of samples with shape [size, z_dim].
+        """
+        std = torch.exp(0.5 * log_var)
+        if not self.training:
+            torch.manual_seed(42)
+        eps = torch.randn_like(std)
+        return mu + std * eps
 
     def get_latent(self, data: torch.Tensor) -> torch.Tensor:
         """ Map `data` in to the latent space. It uses PyTorch Dataloader to
@@ -355,6 +376,6 @@ class CustomScGen(sca.models.scgen):
 
         """
         if self.trainer is None:
-            self.trainer = CustomTrainer(self.model, self.adata, batch_size, device=self.device, **kwargs)
+            self.trainer = CustomTrainer(self.model, self.adata, batch_size=batch_size, device=self.device, **kwargs)
         self.trainer.train(n_epochs, lr, eps)
         self.is_trained_ = True
