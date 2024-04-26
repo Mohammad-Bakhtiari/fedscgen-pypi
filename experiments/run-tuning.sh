@@ -1,6 +1,7 @@
 #!/bin/bash
 
-GPU=2
+NUM_GPUS=3
+GPU=0
 chmod +x fedscgen.sh
 
 echo "hyperparameter tuning for including all cell types and batches"
@@ -19,7 +20,12 @@ for ds in "${DATASETS[@]}";do
   n_rounds=10
   epoch=1
   while true; do
-      ./fedscgen.sh "$H5AD_FILE" "" false false "0" "$n_clients" "$batches" "$GPU" "$n_rounds" "$epoch" 50 true
+      ./fedscgen.sh "$H5AD_FILE" "" false false "0" "$n_clients" "$batches" "$GPU" "$n_rounds" "$epoch" 50 true &
+      GPU=$((GPU+1))
+      if [ $GPU -eq $NUM_GPUS ]; then
+          wait
+          GPU=0
+      fi
       epoch=$((epoch+1))
       if [ $epoch -gt 10 ]; then
           break
