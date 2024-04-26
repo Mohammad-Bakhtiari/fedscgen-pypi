@@ -86,15 +86,8 @@ def main(args):
             global_weights = aggregate(local_weights, local_n_samples)
 
             if args.per_round_snapshots:
-                global_model.model.load_state_dict(global_weights)
-                corrected_adata = global_model.model.batch_removal(adata,
-                                                                   batch_key=args.batch_key,
-                                                                   cell_label_key=args.cell_key,
-                                                                   return_latent=True)
-                corrected_adata.write(f"{args.output}/{translate(str(test_batches))}/corrected_{r}.h5ad")
-                single_plot(corrected_adata, args.batch_key, args.cell_key,
-                            f"{args.output}/{translate(str(test_batches))}",
-                            f"corrected_{r}.png")
+                correction_snapshot(clients, global_weights, f"{args.output}/{translate(str(test_batches))}",
+                                    filename=f"corrected_{r}")
         for client in clients:
             client.model.load_state_dict(global_weights)
             client.model.eval()
@@ -105,6 +98,17 @@ def main(args):
         evaluate_correction(adata, clients, test_clients, global_model, test_batches, args.batch_key, args.cell_key,
                             output_dir)
         global_model.save(f"{args.output}/{translate(str(test_batches))}/trained_model", overwrite=True)
+
+
+def correction_snapshot(clients, global_weights, path, filename):
+    correction_client = copy.deepcopy(clients)
+    for client in correction_client:
+        client.model.load_state_dict(global_weights)
+        client.model.eval()
+    mlg = post_training_correction_wf(clients)
+    fed_corrected = correct_local_data(clients, mlg)
+    fed_corrected.write(f"{path}/{filename}.h5ad")
+    single_plot(fed_corrected, args.batch_key, args.cell_key, path, f"{filename}.png")
 
 
 def evaluate_correction(adata, clients, test_clients, global_model, test_batches, batch_key, cell_key, output):
