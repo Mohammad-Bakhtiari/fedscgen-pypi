@@ -34,6 +34,9 @@ def set_seed(seed=SEED):
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        torch.use_deterministic_algorithms(True)
 
 
 set_seed(SEED)
@@ -56,7 +59,7 @@ def get_cuda_device(device_index: int):
 
 def combine_test_loaders(loaders):
     combined_dataset = ConcatDataset([dl.dataset for dl in loaders])
-    return DataLoader(combined_dataset, batch_size=32, shuffle=True, worker_init_fn=seed_worker, num_workers=4)
+    return DataLoader(combined_dataset, batch_size=32, shuffle=False, worker_init_fn=seed_worker, num_workers=4)
 
 
 class Data:
@@ -376,7 +379,7 @@ def instantiate_model(input_size, n_classes, lr, init_model, model_name, hidden_
 def load_dataloaders(x_train, y_train, x_test, y_test, batch_size=32):
     # Convert the data to PyTorch tensors and create DataLoader objects
     train_dataset = TensorDataset(torch.tensor(x_train), torch.tensor(y_train))
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True,
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, drop_last=True,
                               worker_init_fn=seed_worker, num_workers=4)
     test_loader = None
     if len(x_test) > 0:
@@ -482,11 +485,11 @@ def get_latent(adata, latent):
 def calc_obsm_pca(adata_file_paths, n_components=50, common_space=False):
     adata_files = {}
     if common_space:
-        pca = PCA(n_components=n_components)
+        pca = PCA(n_components=n_components, svd_solver='full')
     for counter, (key, path) in enumerate(adata_file_paths.items()):
         adata = anndata.read_h5ad(path)
         if not common_space:
-            pca = PCA(n_components=n_components)
+            pca = PCA(n_components=n_components, svd_solver='full')
             pca.fit(adata.X)
         elif counter == 0:
             pca.fit(adata.X)
@@ -538,15 +541,22 @@ def drop(data, cell_key, drop_cell_values):
 
 
 def aggregate_batch_sizes(batch_sizes: dict):
+    shared = None
+    for cell_types in list(batch_sizes.values()):
+        if shared is None:
+            shared = set(cell_types)
+        else:
+            shared.intersection_update(cell_types)
     max_client = {}
     for client_id, batch in batch_sizes.items():
         for cell_type, size in batch.items():
-            if cell_type in max_client:
-                dominant_batch_size = batch_sizes[max_client[cell_type]][cell_type]
-                if size > dominant_batch_size:
+            if cell_type in shared:
+                if cell_type in max_client:
+                    dominant_batch_size = batch_sizes[max_client[cell_type]][cell_type]
+                    if size > dominant_batch_size:
+                        max_client[cell_type] = client_id
+                else:
                     max_client[cell_type] = client_id
-            else:
-                max_client[cell_type] = client_id
     clients_majority_cell_batch = {}
     for cell_type, client_id in max_client.items():
         if client_id in clients_majority_cell_batch:
