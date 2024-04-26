@@ -1,78 +1,56 @@
 #!/bin/bash
 
 chmod +x fedscgen.sh
-# HumanDendriticCells.h5ad
-# It has only two classes, so Scenario 1 (dropping) and Scenario 2 (combining) does not work here!
-# Scenario 3: Neither combining nor dropping any cell types
-./fedscgen.sh "HumanDendriticCells.h5ad" "" false false "0" "2" "0,1" 0
 
-# MouseCellAtlas.h5ad
+GPU=0
+NUM_GPUS=3
+DATASETS=(HumanDendriticCells MouseCellAtlas HumanPancreas PBMC CellLine MouseRetina MouseBrain MouseHematopoieticStemProgenitorCells)
+DROPPED_CELLTYPES=( ""
+ "Epithelial,Dendritic,Smooth-muscle,NK"
+  "stellate,endothelial,mesenchymal,macrophage,mast,epsilon,schwann,t_cell,MHC class II"
+   "Plasmacytoid dendritic cell,Megakaryocyte,Hematopoietic stem cell"
+   ""
+   "ganglion,vascular_endothelium,horizontal,fibroblasts,microglia,pericytes,astrocytes"
+   "Olfactory ensheathing cells,Choroid_plexus,Mitotic"
+   "MPP,LTHSC,LMPP,Unsorted")
 
-# Scenario 1: Dropping cell types but not combining
-# The cell types "Epithelial,Dendritic,Smooth-muscle,NK" will be dropped.
-# Combining is set to false.
-./fedscgen.sh "MouseCellAtlas.h5ad" "Epithelial,Dendritic,Smooth-muscle,NK" false true "0" "2" "0,1" 1
+for index in "${!DATASETS[@]}"
+do
+  for inclusion in all dropped combined
+  do
+    dataset=${DATASETS[$index]}
+    dropped_celltypes=${DROPPED_CELLTYPES[$index]}
+    if [ $inclusion != "all" ]; then
+      if [ "$dataset" == "HumanDendriticCells" ] || [ "$dataset" == "CellLine" ]; then
+        continue
+      fi
+    fi
+    combined=false
+    dropped=false
+    if [ $inclusion == "combined" ]; then
+      combined=true
+    elif [ $inclusion == "dropped" ]; then
+      dropped=true
+    fi
+    n_clients="2"
+    batches="0,1"
+    batch_out="0"
+    if [ "$dataset" == "HumanPancreas" ]; then
+      n_clients="5 4"
+      batches="0,1,2,3,4"
+      batch_out="0 1"
+    elif [ "$dataset" == "CellLine" ]; then
+      n_clients="3"
+      batches="0,1,2"
 
-# Scenario 2: Combining cell types but not dropping
-# The cell types "Epithelial,Dendritic,Smooth-muscle,NK" will be combined.
-# Dropping is set to false.
-./fedscgen.sh "MouseCellAtlas.h5ad" "Epithelial,Dendritic,Smooth-muscle,NK" true false "0" "2" "0,1" 1
-
-# Scenario 3: Neither combining nor dropping any cell types
-./fedscgen.sh "MouseCellAtlas.h5ad" "" false false "0" "2" "0,1" 0
-
-
-# HumanPancreas.h5ad
-# Scenario 1: Dropping cell types but not combining
-./fedscgen.sh "HumanPancreas.h5ad" "stellate,endothelial,mesenchymal,macrophage,mast,epsilon,schwann,t_cell,MHC class II" false true "0 1 2 3" "5 4 3 2" "0,1,2,3,4" 1
-
-# Scenario 2: Combining cell types but not dropping
-./fedscgen.sh "HumanPancreas.h5ad" "stellate,endothelial,mesenchymal,macrophage,mast,epsilon,schwann,t_cell,MHC class II" true false "0 1 2 3" "5 4 3 2" "0,1,2,3,4" 1
-
-# Scenario 3: Neither combining nor dropping any cell types
-./fedscgen.sh "HumanPancreas.h5ad" "" false false "0 1 2 3" "5 4 3 2" "0,1,2,3,4" 1
-
-# PBMC.h5ad
-# Scenario 1: Dropping cell types but not combining
-./fedscgen.sh "PBMC.h5ad" "Plasmacytoid dendritic cell,Megakaryocyte,Hematopoietic stem cell" false true "0" "2" "0,1" 1
-
-# Scenario 2: Combining cell types but not dropping
-./fedscgen.sh "PBMC.h5ad" "Plasmacytoid dendritic cell,Megakaryocyte,Hematopoietic stem cell" true false "0" "2" "0,1" 1
-
-# Scenario 3: Neither combining nor dropping any cell types
-./fedscgen.sh "PBMC.h5ad" "" false false "0" "2" "0,1" 1
-
-# CellLine.h5ad
-# This dataset doesn't have any specific cell types to combine or drop, so only Scenario 3 applies.
-# Scenario 3: Neither combining nor dropping any cell types
-./fedscgen.sh "CellLine.h5ad" "" false false "0 1" "3 2" "0,1,2" 1
-
-# MouseRetina.h5ad
-# Scenario 1: Dropping cell types but not combining
-./fedscgen.sh "MouseRetina.h5ad" "ganglion,vascular_endothelium,horizontal,fibroblasts,microglia,pericytes,astrocytes" false true "0" "2" "0,1" 1
-
-# Scenario 2: Combining cell types but not dropping
-./fedscgen.sh "MouseRetina.h5ad" "ganglion,vascular_endothelium,horizontal,fibroblasts,microglia,pericytes,astrocytes" true false "0" "2" "0,1" 1
-
-# Scenario 3: Neither combining nor dropping any cell types
-./fedscgen.sh "MouseRetina.h5ad" "" false false "0" "2" "0,1" 1
-
-# MouseBrain.h5ad
-# Scenario 1: Dropping cell types but not combining
-./fedscgen.sh "MouseBrain.h5ad" "Olfactory ensheathing cells,Choroid_plexus,Mitotic" false true "0" "2" "0,1" 1
-
-# Scenario 2: Combining cell types but not dropping
-./fedscgen.sh "MouseBrain.h5ad" "Olfactory ensheathing cells,Choroid_plexus,Mitotic" true false "0" "2" "0,1" 1
-
-# Scenario 3: Neither combining nor dropping any cell types
-./fedscgen.sh "MouseBrain.h5ad" "" false false "0" "2" "0,1" 1
-
-# MouseHematopoieticStemProgenitorCells.h5ad
-# Scenario 1: Dropping cell types but not combining
-./fedscgen.sh "MouseHematopoieticStemProgenitorCells.h5ad" "MPP,LTHSC,LMPP,Unsorted" false true "0" "2" "0,1" 1
-
-# Scenario 2: Combining cell types but not dropping
-  ./fedscgen.sh "MouseHematopoieticStemProgenitorCells.h5ad" "MPP,LTHSC,LMPP,Unsorted" true false "0" "2" "0,1" 1
-
-# Scenario 3: Neither combining nor dropping any cell types
-./fedscgen.sh "MouseHematopoieticStemProgenitorCells.h5ad" "" false false "0" "2" "0,1" 1
+    fi
+    echo "Running fedscgen for $dataset with $inclusion with combined=$combined and dropped=$dropped and dropped_celltypes=$dropped_celltypes and n_clients=$n_clients and batches=$batches on GPU $GPU"
+    ./fedscgen.sh "$dataset.h5ad" "${dropped_celltypes}" $combined $dropped "$batch_out" "$n_clients" "$batches" "$GPU" &
+    GPU=$((GPU+1))
+    if [ $GPU -eq $NUM_GPUS ]; then
+      wait
+      GPU=0
+    fi
+  done
+done
+wait
