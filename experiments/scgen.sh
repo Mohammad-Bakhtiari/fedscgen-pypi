@@ -31,7 +31,7 @@ if [ "$COMBINE" = "true" ]; then
 fi
 
 mkdir -p "${output_path}"
-
+export CUBLAS_WORKSPACE_CONFIG=:4096:8
 python "${root_dir}/scripts/scgen.py" \
 --model_path "${root_dir}/models/${DATASET}" \
 --data_path "$raw" \
