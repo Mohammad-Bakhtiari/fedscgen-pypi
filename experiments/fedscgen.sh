@@ -10,8 +10,10 @@ BATCH_OUT_VALUES=($5)
 N_CLIENTS_VALUES=($6)
 BATCHES=$7
 GPU="${8:-1}"
-BATCH_SIZE="${9:-50}"
-SNAPSHOT="${10:true}"
+ROUND="${9:-10}"
+EPOCH="${10:-2}"
+BATCH_SIZE="${11:-50}"
+SNAPSHOT="${12:-flase}"
 
 GPU=1
 # DATASET is H5AD_FILE without the extension
@@ -50,12 +52,12 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
     output="$output_path/BO${batch_out}-C${n_clients}"
     mkdir -p "${output}"
     echo "Running $batch_out batch out for $n_clients clients"
-
+    export CUBLAS_WORKSPACE_CONFIG=:4096:8
     python3 "${root_dir}/scripts/fedscgen_.py" \
         --init_model_path "${root_dir}/models/${DATASET}" \
         --adata "$raw" \
         --output  "$output"\
-        --epoch 2 \
+        --epoch $EPOCH \
         --cell_key "cell_type" \
         --batch_key "batch" \
         --batches "$BATCHES" \
@@ -68,15 +70,23 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
         --n_clients "$n_clients" \
         --remove_cell_types "$REMOVE_CELL_TYPES" \
         --gpu "$GPU" \
-        --n_rounds 10   \
+        --n_rounds $ROUND   \
         $combine_flag \
         $snapshot_flag
-
-    while IFS= read -r -d '' corrected
-    do
-      echo -e "\e[33mPCA on $corrected\e[0m \n "
-      python "${root_dir}/scripts/pca_reduction_simple.py" --path "$corrected" \
-        --n_components 20 \
-        --output_dir "$corrected"
-    done < <(find "$output" -name '*.h5ad' -print0)
+    if [ "$SNAPSHOT" = "true" ]; then
+        for corrected in "$output"/*.h5ad; do
+          echo -e "\e[33mPCA on $corrected\e[0m \n "
+          python "${root_dir}/scripts/pca_reduction_simple.py" --path "$corrected" \
+            --n_components 20 \
+            --output_dir "$corrected"
+        done
+    else
+      while IFS= read -r -d '' corrected
+      do
+        echo -e "\e[33mPCA on $corrected\e[0m \n "
+        python "${root_dir}/scripts/pca_reduction_simple.py" --path "$corrected" \
+          --n_components 20 \
+          --output_dir "$corrected"
+      done < <(find "$output" -name '*.h5ad' -print0)
+    fi
 done
