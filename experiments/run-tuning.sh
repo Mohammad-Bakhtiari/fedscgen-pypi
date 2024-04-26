@@ -1,6 +1,7 @@
 #!/bin/bash
 
-chmod +x fedscgen_tuning.sh
+GPU=2
+chmod +x fedscgen.sh
 
 echo "hyperparameter tuning for including all cell types and batches"
 DATASETS=(HumanDendriticCells MouseCellAtlas HumanPancreas PBMC CellLine MouseRetina MouseHematopoieticStemProgenitorCells)
@@ -15,5 +16,13 @@ for ds in "${DATASETS[@]}";do
     batches="0,1,2"
     n_clients=3
   fi
-  ./fedscgen_tuning.sh "${ds}.h5ad" "$n_clients" "$batches"
+  n_rounds=10
+  epoch=1
+  while true; do
+      ./fedscgen.sh "$H5AD_FILE" "" false false "0" "$n_clients" "$batches" "$GPU" "$n_rounds" "$epoch" 50 true
+      epoch=$((epoch+1))
+      if [ $epoch -gt 10 ]; then
+          break
+      fi
+  done
 done
