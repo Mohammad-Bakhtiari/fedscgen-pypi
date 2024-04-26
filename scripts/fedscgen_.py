@@ -5,10 +5,10 @@ import anndata
 from functools import partial
 import ast
 import os
-from fedscgen.FedScGen import FedScGen, ScGen
+from fedscgen.FedScGen import FedScGen
 from fedscgen.utils import testset_combination, aggregate, aggregate_batch_sizes, remove_cell_types, combine_cell_types, \
     get_cuda_device, abs_diff_centrally_corrected
-from fedscgen.plots import translate, plot_all_umaps, single_plot
+from fedscgen.plots import translate, single_plot
 
 
 def update_clients(clients, g_weights):
@@ -96,15 +96,14 @@ def main(args):
                             f"{args.output}/{translate(str(test_batches))}",
                             f"corrected_{r}.png")
         for client in clients:
-            client.set_weights(global_weights)
+            client.model.load_state_dict(global_weights)
             client.model.eval()
-        if not args.per_round_snapshots:
-            global_model.model.load_state_dict(global_weights)
-            output_dir = f"{args.output}/{translate(str(test_batches))}"
-            if not os.path.exists(output_dir):
-                os.makedirs(output_dir)
-            evaluate_correction(adata, clients, test_clients, global_model, test_batches, args.batch_key, args.cell_key,
-                                output_dir)
+        global_model.model.load_state_dict(global_weights)
+        output_dir = f"{args.output}/{translate(str(test_batches))}"
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        evaluate_correction(adata, clients, test_clients, global_model, test_batches, args.batch_key, args.cell_key,
+                            output_dir)
         global_model.save(f"{args.output}/{translate(str(test_batches))}/trained_model", overwrite=True)
 
 
@@ -115,7 +114,7 @@ def evaluate_correction(adata, clients, test_clients, global_model, test_batches
     single_plot(centrally_corrected, batch_key, cell_key, output, "_centrally_corrected.png")
     print("Evaluating the performance of the batch effect correction Without new studies...")
     mlg = post_training_correction_wf(clients)
-    fed_corrected = global_model.remove_batch_effect(adata, mlg)
+    fed_corrected = correct_local_data(clients, mlg)
     fed_corrected.write(f"{output}/fed_corrected.h5ad")
     single_plot(fed_corrected, batch_key, cell_key, output, "_fed_corrected.png")
     fed_corrected_with_new_studies = None
@@ -127,11 +126,19 @@ def evaluate_correction(adata, clients, test_clients, global_model, test_batches
             client.model.eval()
             clients.append(client)
         mlg = post_training_correction_wf(clients)
-        fed_corrected_with_new_studies = global_model.remove_batch_effect(adata, mlg)
+        fed_corrected_with_new_studies = correct_local_data(clients, mlg)
         fed_corrected_with_new_studies.write(f"{output}/fed_corrected_with_new_studies.h5ad")
         single_plot(fed_corrected_with_new_studies, batch_key, cell_key, output, "_fed_corrected_with_new_studies.png")
     abs_diff = abs_diff_centrally_corrected(centrally_corrected, fed_corrected, fed_corrected_with_new_studies)
     abs_diff.to_csv(f"{output}/abs_diff.csv", sep=",", index=True)
+
+
+def correct_local_data(clients, mlg):
+    fed_corrected = [client.remove_batch_effect(mlg) for client in clients]
+    fed_corrected = anndata.AnnData.concatenate(*fed_corrected, batch_key="concat_batch", index_unique=None)
+    if "concat_batch" in fed_corrected.obs.columns:
+        del fed_corrected.obs["concat_batch"]
+    return fed_corrected
 
 
 def post_training_correction_wf(clients):
