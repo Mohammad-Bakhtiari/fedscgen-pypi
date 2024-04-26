@@ -35,7 +35,7 @@ do
     elif [ $inclusion == "dropped" ]; then
       dropped=true
     fi
-    echo "Running scgen for $dataset with $inclusion with combined=$combined and dropped=$dropped and dropped_celltypes=$dropped_celltypes"
+    echo -e "\e[31mRunning scgen for $dataset with $inclusion with combined=$combined and dropped=$dropped and dropped_celltypes=$dropped_celltypes\e[0m"
     ./scgen.sh "$dataset.h5ad" "${dropped_celltypes}" $combined $dropped $GPU &
     GPU=$((GPU+1))
     if [ $GPU -eq $NUM_GPUS ]; then
