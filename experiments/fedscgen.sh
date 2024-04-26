@@ -15,7 +15,6 @@ EPOCH="${10:-2}"
 BATCH_SIZE="${11:-50}"
 SNAPSHOT="${12:-flase}"
 
-GPU=1
 # DATASET is H5AD_FILE without the extension
 DATASET=$(echo "$H5AD_FILE" | cut -f 1 -d '.')
 
