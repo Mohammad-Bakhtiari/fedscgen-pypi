@@ -13,7 +13,7 @@ from pathlib import Path
 parent_dir = str(Path(__file__).resolve().parent.parent)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
-from fedscgen.utils import set_seed
+from fedscgen.utils import set_seed, calc_obsm_pca
 
 set_seed()
 
@@ -139,32 +139,26 @@ def benchmark_all_datasets(fed_data_dir: str, cent_data_dir: str, inclusion: str
 def benchmark_reproduce(fed_data_dir: str, cent_data_dir: str, inclusion: str, n_components: int, batch_key: str,
                         cell_key: str):
     all_metrics = []
-    for i_ in range(2):
-        ds_name = "HumanDendriticCells"
-        inclusion = "all"
-        n_clients = 5 if ds_name == "HumanPancreas" else 3 if ds_name == "CellLine" else 2
-        fedscgen = anndata.read_h5ad(
-            os.path.join(fed_data_dir, ds_name, inclusion, f"BO0-C{n_clients}", "fed_corrected.h5ad"))
-        latent_adata = anndata.AnnData(fedscgen.obsm[f'pca_{n_components}'])
-        latent_adata.obs = fedscgen.obs
-        fedscgen_metrics = benchmark(fedscgen, latent_adata, batch_key, cell_key, "FedscGen")
-        scgen = anndata.read_h5ad(os.path.join(cent_data_dir, ds_name, inclusion, "corrected.h5ad"))
-        latent_adata = anndata.AnnData(scgen.obsm[f'pca_{n_components}'])
-        latent_adata.obs = scgen.obs
-        scgen_metrics = benchmark(scgen, latent_adata, batch_key, cell_key, "scGen")
-        all_metrics.extend([fedscgen_metrics, scgen_metrics])
-    df = pd.read_csv(os.path.join(fed_data_dir, f"reproduce-{ds_name}.csv"), sep=",", index_col=False)
-    pd.concat([df, pd.DataFrame(all_metrics)]).to_csv(os.path.join(fed_data_dir, f"reproduce-{ds_name}.csv"), sep=",",
-                                                      index=False)
-    print(df)
-    exit()
-    # plot range of values for each metric and for both methods
-    import seaborn as sns
-    import matplotlib.pyplot as plt
-    sns.boxplot(data=df, x="Metric", y="Value", hue="Approach")
-    plt.savefig(os.path.join(fed_data_dir, f"reproduce-{ds_name}.png"))
-    plt.close()
-    # df.to_csv(os.path.join(fed_data_dir, f"reproduce-f{ds_name}.csv"), sep=",", index=False)
+    ds_name = "MouseHematopoieticStemProgenitorCells"
+    inclusion = "all"
+    n_clients = 5 if ds_name == "HumanPancreas" else 3 if ds_name == "CellLine" else 2
+
+    def bench_model(path):
+        # adata = anndata.read_h5ad(path)
+        adata = calc_obsm_pca({'a': path}, 20)["a"]
+        latent_adata = anndata.AnnData(adata.obsm[f'pca_{n_components}'])
+        latent_adata.obs = adata.obs
+        metrics = benchmark(adata, latent_adata, batch_key, cell_key, "FedscGen")
+        return metrics
+
+    fed = bench_model(os.path.join(fed_data_dir, ds_name, inclusion, f"BO0-C2", "fed_corrected.h5ad"))
+    # fed = bench_model(os.path.join(fed_data_dir, ds_name, inclusion, f"BO0-C2", f"corrected_10.h5ad"))
+    scgen = bench_model(os.path.join(cent_data_dir, ds_name, inclusion, "corrected.h5ad"))
+    tun = bench_model(os.path.join(fed_data_dir, ds_name, inclusion, f"BO0-C2", f"corrected_10.h5ad"))
+    fed_diff = {k: fed[k] - scgen[k] for k in scgen.keys() if k != "Approach"}
+    tun_diff = {k: tun[k] - scgen[k] for k in scgen.keys() if k != "Approach"}
+    print(fed_diff)
+    print(tun_diff)
 
 
 def benchmark_batch_out(fed_data_dir, cent_data_dir, n_batches, n_components, batch_key, cell_key):
