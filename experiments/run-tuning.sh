@@ -20,7 +20,7 @@ for ds in "${DATASETS[@]}";do
   n_rounds=10
   epoch=1
   while true; do
-      ./fedscgen.sh "$H5AD_FILE" "" false false "0" "$n_clients" "$batches" "$GPU" "$n_rounds" "$epoch" 50 true &
+      ./fedscgen.sh "$ds.h5ad" "" false false "0" "$n_clients" "$batches" "$GPU" "$n_rounds" "$epoch" 50 true true &
       GPU=$((GPU+1))
       if [ $GPU -eq $NUM_GPUS ]; then
           wait
