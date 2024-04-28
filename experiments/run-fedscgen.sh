@@ -31,6 +31,8 @@ do
       combined=true
     elif [ $inclusion == "dropped" ]; then
       dropped=true
+    else
+      dropped_celltypes=""
     fi
     n_clients="2"
     batches="0,1"
