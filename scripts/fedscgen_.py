@@ -101,12 +101,14 @@ def main(args):
 
 
 def correction_snapshot(clients, global_weights, path, filename):
-    correction_client = copy.deepcopy(clients)
-    for client in correction_client:
+    original_state_dicts = [client.model.state_dict() for client in clients]
+    for client in clients:
         client.model.load_state_dict(global_weights)
         client.model.eval()
     mlg = post_training_correction_wf(clients)
     fed_corrected = correct_local_data(clients, mlg)
+    for client, original_sd in zip(clients, original_state_dicts):
+        client.model.load_state_dict(original_sd)
     fed_corrected.write(f"{path}/{filename}.h5ad")
     single_plot(fed_corrected, args.batch_key, args.cell_key, path, f"{filename}.png")
 
