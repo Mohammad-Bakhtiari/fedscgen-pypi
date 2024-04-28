@@ -34,6 +34,8 @@ do
       combined=true
     elif [ $inclusion == "dropped" ]; then
       dropped=true
+    else
+      dropped_celltypes=""
     fi
     echo -e "\e[31mRunning scgen for $dataset with $inclusion with combined=$combined and dropped=$dropped and dropped_celltypes=$dropped_celltypes\e[0m"
     ./scgen.sh "$dataset.h5ad" "${dropped_celltypes}" $combined $dropped $GPU &
