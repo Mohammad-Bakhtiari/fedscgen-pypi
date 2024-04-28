@@ -14,6 +14,7 @@ ROUND="${9:-10}"
 EPOCH="${10:-2}"
 BATCH_SIZE="${11:-50}"
 SNAPSHOT="${12:-flase}"
+TUNING="${13:-false}"
 
 # DATASET is H5AD_FILE without the extension
 DATASET=$(echo "$H5AD_FILE" | cut -f 1 -d '.')
@@ -39,7 +40,9 @@ fi
 root_dir="$(dirname "$PWD")"
 raw="${root_dir}/data/datasets/${H5AD_FILE}"
 output_path="${root_dir}/results/scgen/federated/${DATASET}/${INCLUSION}"
-
+if [ "$TUNING" = "true" ]; then
+    output="${root_dir}/results/scgen/federated/param-tuning/${DATASET}/E${EPOCH}"
+fi
 combine_flag=""
 if [ "$COMBINE" = "true" ]; then
     combine_flag="--combine"
@@ -48,7 +51,9 @@ fi
 for i in "${!BATCH_OUT_VALUES[@]}"; do
     batch_out=${BATCH_OUT_VALUES[$i]}
     n_clients=${N_CLIENTS_VALUES[$i]}
-    output="$output_path/BO${batch_out}-C${n_clients}"
+    if [ "$TUNING" = "false" ]; then
+        output="$output_path/BO${batch_out}-C${n_clients}"
+    fi
     mkdir -p "${output}"
     echo "Running $batch_out batch out for $n_clients clients"
     export CUBLAS_WORKSPACE_CONFIG=:4096:8
