@@ -30,6 +30,5 @@ for ds in "${DATASETS[@]}";do
       if [ $epoch -gt 10 ]; then
           break
       fi
-      break
   done
 done
