@@ -7,7 +7,7 @@ chmod +x fedscgen.sh
 echo "hyperparameter tuning for including all cell types and batches"
 DATASETS=(HumanDendriticCells MouseCellAtlas HumanPancreas PBMC CellLine MouseRetina MouseHematopoieticStemProgenitorCells)
 for ds in "${DATASETS[@]}";do
-  echo "Running hyperparameter tuning for $ds"
+  echo "\e[31mRunning hyperparameter tuning for $ds\e[0m"
   batches="0,1"
   n_clients=2
   if [ "$ds" == "HumanPancreas" ]; then
@@ -30,5 +30,6 @@ for ds in "${DATASETS[@]}";do
       if [ $epoch -gt 10 ]; then
           break
       fi
+      break
   done
 done
