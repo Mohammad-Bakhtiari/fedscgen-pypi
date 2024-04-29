@@ -26,7 +26,7 @@ from sklearn.preprocessing import LabelBinarizer
 from sklearn.cluster import KMeans
 from itertools import combinations
 import copy
-
+from collections import Counter
 
 def set_seed(seed=SEED):
     random.seed(seed)
@@ -541,12 +541,8 @@ def drop(data, cell_key, drop_cell_values):
 
 
 def aggregate_batch_sizes(batch_sizes: dict):
-    shared = None
-    for cell_types in list(batch_sizes.values()):
-        if shared is None:
-            shared = set(cell_types)
-        else:
-            shared.intersection_update(cell_types)
+    shared = Counter(celltype for client in batch_sizes.values() for celltype in client)
+    shared = {celltype for celltype, count in shared.items() if count > 1}
     max_client = {}
     for client_id, batch in batch_sizes.items():
         for cell_type, size in batch.items():
