@@ -42,6 +42,7 @@ for batch_out in "${!BATCH_OUT_VALUES[@]}"; do
   output_path="${output_path_ds_inclusion}/BO${batch_out}"
   mkdir -p "${output_path}"
   echo "Running scgen with batch out: $batch_out"
+  export CUBLAS_WORKSPACE_CONFIG=:4096:8
   python "${root_dir}/scripts/scgen.py" \
   --model_path "${root_dir}/models/centralized/${DATASET}" \
   --data_path "$raw" \
