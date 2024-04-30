@@ -184,33 +184,33 @@ def plot_bo_hitmap(df, plt_name, dpi, font_size=20, tick_size=14, cell_size=1, c
 
 
 def find_best_round_epoch(dataset_keys, df, metric_keys, scGen):
-    rounds = {}
-    round_epoch = "Round"
-    for r in df[round_epoch].unique():
-        df_diff = []
-        for j, dataset in enumerate(dataset_keys):
-            for i, metric in enumerate(metric_keys):
-                data = df[df['Dataset'] == dataset]
-                scgen_ds_metric = scGen[scGen["Dataset"] == dataset][metric].values[0]
-                data = data[data[metric] > scgen_ds_metric]
-                data[metric] = data[metric].apply(lambda x: x - scgen_ds_metric)
-                df_diff.append(data)
-        df_diff = pd.concat(df_diff)
-        print("#################")
-        print(df_diff)
-        for e in df_diff['Epoch'].unique():
-            for j, dataset in enumerate(df_diff['Dataset'].unique()):
-                v = df_diff[(df_diff['Dataset'] == dataset) & (df_diff[round_epoch] == r) & (df_diff["Epoch"] == e)][
-                    metric_keys].mean().mean()
-                if f"R{r}E{e}" in rounds:
-                    rounds[f"R{r}E{e}"].append(v)
-                else:
-                    rounds[f"R{r}E{e}"] = [v]
-    # sort dictionary by values
-    rounds = {k: np.mean(v) for k, v in rounds.items()}
-    print({k: v for k, v in sorted(rounds.items(), key=lambda item: item[1], reverse=True)})
-    print(max(rounds, key=rounds.get), rounds[max(rounds, key=rounds.get)])
-
+    dfs=[]
+    for dataset in dataset_keys:
+        data = df[df['Dataset'] == dataset]
+        for metric in metric_keys:
+            scgen_ds_metric = scGen[scGen["Dataset"] == dataset][metric].values[0]
+            data[metric] = data[metric].apply(lambda x: x - scgen_ds_metric)
+        dfs.append(data)
+    df = pd.concat(dfs)
+    res_min = {}
+    for r in df['Round'].unique():
+        for e in df['Epoch'].unique():
+            data = df[(df['Round'] == r) & (df['Epoch'] == e)]
+            res_min[f"E{e}R{r}"] = data[metric_keys].min().min()
+    res_max = sorted(res_min.items(), key=lambda x: x[1], reverse=True)
+    print(res_max[:10])
+    count_max = {}
+    for k, v in res_max:
+        e = int(k[1:].split("R")[0])
+        r = int(k.split("R")[1])
+        temp = df[(df['Round'] == r) & (df['Epoch'] == e)]
+        count_max[k] = (temp[metric_keys] >= 0).sum().sum()
+    count_max = sorted(count_max.items(), key=lambda x: x[1], reverse=True)
+    print(count_max[:10])
+    print(len(count_max))
+    er = df[(df["Epoch"] == 2) & (df["Round"] == 8)]
+    print((er[metric_keys] >= 0).sum())
+    print((er[metric_keys] < 0).sum())
 
 def read_kbet_score(scores_path):
     df = pd.read_csv(scores_path)
@@ -689,7 +689,7 @@ if __name__ == '__main__':
     parser.add_argument("--output_dir", type=str, help="Path to the output directory.")
     args = parser.parse_args()
     if args.scenario == "tuning":
-        read_tuning_res(args.data_dir, True)
+        read_tuning_res(args.data_dir, False)
     elif args.scenario == "kbet-diff":
         read_kbet(args.data_dir)
     elif args.scenario == "batchout":
