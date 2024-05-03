@@ -149,7 +149,6 @@ def plot_tuning(data_dir, fed_data_dir, raw_data_dir, batch_key, cell_key, epoch
             'FedScGen': os.path.join(fed_data_dir, dataset_name, f"E{epoch}", f'corrected_{round}.h5ad')
         }
         plot_dataset_umap(batch_key, cell_key, dataset_name, "all", files, output_dir)
-        break
 
 
 def plot_inclusion_scenarios(data_dir, fed_data_dir, raw_data_dir, batch_key, cell_key, output_dir):

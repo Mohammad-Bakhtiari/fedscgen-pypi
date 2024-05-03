@@ -689,7 +689,7 @@ if __name__ == '__main__':
     parser.add_argument("--output_dir", type=str, help="Path to the output directory.")
     args = parser.parse_args()
     if args.scenario == "tuning":
-        read_tuning_res(args.data_dir, False)
+        read_tuning_res(args.data_dir, True)
     elif args.scenario == "kbet-diff":
         read_kbet(args.data_dir)
     elif args.scenario == "batchout":
