@@ -45,7 +45,7 @@ if [ "$scenario" = "batch-out" ]; then
   --inclusion all \
   --cell_key "cell_type" \
   --batch_key "batch" \
-  --n_batches 5 \
+  --n_batches 2 \
   --n_components 20
 fi
 
