@@ -61,7 +61,7 @@ for config_key in "scgen" "fedscgen"; do
   echo $OUTPUT
   echo $ADATA
 
-
+  export CUBLAS_WORKSPACE_CONFIG=:4096:8
   python "${root_dir}/scripts/classification.py" \
       --adata "$ADATA" \
       --output "$OUTPUT" \
