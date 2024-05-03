@@ -620,14 +620,14 @@ def set_w(model, weights):
 
 
 def abs_diff_centrally_corrected(centrally_corrected, fed_corrected, fed_corrected_with_new_studies):
-    abs_diff = np.abs(centrally_corrected.X - fed_corrected.X)
+    if fed_corrected_with_new_studies is None:
+        abs_diff = np.abs(centrally_corrected.X - fed_corrected.X)
+        indices = ["Without new studies"]
+    else:
+        abs_diff = np.abs(centrally_corrected.X - fed_corrected_with_new_studies.X)
+        indices = ["With new studies"]
     rows = [{"Mean": np.mean(abs_diff), "Standard deviation": np.std(abs_diff), "Maximum": np.max(abs_diff),
              "Minimum": np.min(abs_diff), "Sum": np.sum(abs_diff)}]
-    indices = ["Without new studies"]
-    if fed_corrected_with_new_studies is not None:
-        abs_diff = np.abs(centrally_corrected.X - fed_corrected_with_new_studies.X)
-        rows.append({"Mean": np.mean(abs_diff), "Standard deviation": np.std(abs_diff), "Maximum": np.max(abs_diff),
-                     "Minimum": np.min(abs_diff), "Sum": np.sum(abs_diff)})
-        indices.append("With new studies")
+
     df = pd.DataFrame(rows, index=indices)
     return df
