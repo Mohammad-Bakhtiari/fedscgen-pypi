@@ -58,8 +58,8 @@ python plot_umaps.py --scenario "tuning" \
   --raw_data_dir "${root_dir}/data/datasets" \
   --fed_data_dir "${root_dir}/results/scgen/federated/param-tuning" \
   --output_dir "${root_dir}/results/scgen/umap/tuning" \
-  --round 2 \
-  --epoch 3
+  --round 8 \
+  --epoch 2
 
 echo "plotting umaps for corrected data by scGen and FedscGen on HumanPancreas batchout"
 python plot_umaps.py --scenario "batchout" \
