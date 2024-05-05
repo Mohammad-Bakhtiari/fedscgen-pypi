@@ -14,7 +14,7 @@ echo "Running fedscgen"
 
 chmod +x scgen-with-batch-out.sh
 echo "Running scgen with batch out"
-./scgen-with-batch-out.sh 'HumanPancreas.h5ad' '' false false "0,1"
+./scgen-with-batch-out.sh 'HumanPancreas.h5ad' '' false false "0,1,2,3,4"
 
 chmod +x run-classification.sh
 echo "Running centralized classification using corrected data by scGen and FedscGen"
