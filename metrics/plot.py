@@ -443,7 +443,7 @@ def read_scenarios_metrics(data_dir):
         ax = axs[j][i]
 
         sns.heatmap(subset, annot=True, cmap='RdBu', center=0, ax=ax, cbar=False, annot_kws={"size": 16}, square=True,
-                    vmin=-abs_max, vmax=abs_)
+                    vmin=-abs_max, vmax=abs_max)
         ax.set_title(dataset, fontsize=30)
         ax.grid(False)
         if i == 0:
