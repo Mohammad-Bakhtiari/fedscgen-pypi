@@ -75,11 +75,6 @@ python plot_umaps.py --scenario "datasets" \
  --fed_data_dir "${root_dir}/results/scgen/federated" \
  --output_dir "${root_dir}/results/scgen/umap/datasets"
 
-echo "plotting benchmark results for FedscGen and scGen batchout"
-python plot_metrics_batch_out.py --batchout_path "${root_dir}/results/scgen/federated/HumanPancreas/all/BO1-C4/batchout_metrics.csv" \
-  --hp_path "${root_dir}/results/scgen/federated/HumanPancreas/all/BO1-C4" \
-  --output_dir "${root_dir}/results/scgen/benchmark/batch-out"
-
 echo "plot classification accuracy for corrected data by FedscGen and scGen"
 python plot.py --scenario "classification" \
   --data_dir "${root_dir}/results/scgen"
