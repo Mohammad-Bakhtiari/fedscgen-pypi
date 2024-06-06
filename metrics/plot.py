@@ -184,7 +184,7 @@ def plot_bo_hitmap(df, plt_name, dpi, font_size=20, tick_size=14, cell_size=1, c
 
 
 def find_best_round_epoch(dataset_keys, df, metric_keys, scGen):
-    dfs=[]
+    dfs = []
     for dataset in dataset_keys:
         data = df[df['Dataset'] == dataset]
         for metric in metric_keys:
@@ -211,6 +211,7 @@ def find_best_round_epoch(dataset_keys, df, metric_keys, scGen):
     er = df[(df["Epoch"] == 2) & (df["Round"] == 8)]
     print((er[metric_keys] >= 0).sum())
     print((er[metric_keys] < 0).sum())
+
 
 def read_kbet_score(scores_path):
     df = pd.read_csv(scores_path)
@@ -552,7 +553,7 @@ def read_classification(data_dir):
     for dataset, acr in zip(DATASETS, DATASETS_ACRONYM):
         for model in ["mlp-norm", "knn"]:
             for approach in ["scGen", "FedscGen"]:
-                if approach == "scgen":
+                if approach == "scGen":
                     r_dir = os.path.join(data_dir, "centralized", dataset, "all", "classification", model)
                 else:
                     n_clients = 5 if dataset == "HumanPancreas" else 3 if dataset == "CellLine" else 2
@@ -581,27 +582,39 @@ def read_classification(data_dir):
     print(results_df.head(len(results_df)))
     results_df.to_csv(os.path.join(data_dir, "latent_acc_diff.csv"))
 
-    # Assuming 'grouped_acc' is your DataFrame
-    sns.set(style="whitegrid", context="talk")
-    unique_models = results_df["Model"].unique()
-    print(unique_models)
+    # Calculate the difference in accuracy between FedscGen and scGen
+    diff_df = results_df.pivot_table(index=['Dataset', 'Model'], columns='Approach',
+                                     values='Max Accuracy').reset_index()
 
-    fig, axes = plt.subplots(1, len(unique_models), figsize=(12, 6))
-    for i, model in enumerate(unique_models):
-        model_df = results_df[results_df["Model"] == model]
-        ax = sns.barplot(data=model_df, x='Dataset', y='Max Accuracy', hue='Approach', palette='viridis', ax=axes[i])
-        ax.set_title(model)
-        ax.set_xlabel('Dataset')
-        ax.set_ylabel('Accuracy')
-        ax.tick_params(axis='x', rotation=45)
-        ax.get_legend().remove()  # Remove the legend from each subplot
+    diff_df['Accuracy Difference'] = diff_df['FedscGen'] - diff_df['scGen']
+    print(diff_df)
+    # Plotting
+    sns.set(style="white", context="talk")
+    fig, ax = plt.subplots(figsize=(6, 6))
 
-    # Create a single horizontal legend outside the subplots
-    handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.0), ncol=len(labels))
+    markers = {'MLP': 'o', 'KNN': '*'}
+    # use palette='viridis' to color the markers
+    palette = sns.color_palette('viridis', len(diff_df['Dataset'].unique()))
 
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust the layout
-    plt.savefig(os.path.join(data_dir, "latent_accuracy.png"), dpi=300)
+    for i, model in enumerate(diff_df["Model"].unique()):
+        model_df = diff_df[diff_df["Model"] == model]
+        ax.scatter(model_df["Dataset"], model_df["Accuracy Difference"], marker=markers[model], label=model,
+                   facecolors='none', edgecolors=palette[i])
+
+    ax.set_xlabel('Dataset')
+    ax.set_ylabel('Accuracy Difference')
+    ax.axhline(0, color='gray', linestyle='--')
+    ax.tick_params(axis='x', rotation=45)
+    ax.legend()
+
+    # Format y-axis numbers to two decimal places
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x:.2f}'))
+    ax.set_ylim(-0.15, 0.15)
+    # set ytick labels with step of 0.05
+    ax.set_yticks(np.arange(-0.15, 0.16, 0.05))
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(data_dir, "latent_accuracy_comparison.png"), dpi=300)
 
 
 def set_fontsize(ax, y_label, font_size, tick_fontsize):
