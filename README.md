@@ -28,5 +28,9 @@ cd /metrics
  4- Run the [evaluation.sh](/metrics/evaluation.sh) which includes the following experiments to evaluate the performance of the corrected data.
 
 
+## Dataset and Models
+The datasets used in the paper are available at [https://doi.org/10.5281/zenodo.11489844](https://doi.org/10.5281/zenodo.11489844)
+The initial PyTorch models are available at [ https://doi.org/10.5281/zenodo.11505054]( https://doi.org/10.5281/zenodo.11505054)
+
 ## License
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
