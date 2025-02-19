@@ -1,9 +1,10 @@
 #!/bin/bash
+SMPC="${1:-false}"
+NUM_GPUS="${2:-3}"
 
 chmod +x fedscgen.sh
 
 GPU=0
-NUM_GPUS=3
 DATASETS=(HumanDendriticCells MouseCellAtlas HumanPancreas PBMC CellLine MouseRetina MouseBrain MouseHematopoieticStemProgenitorCells)
 DROPPED_CELLTYPES=( ""
  "Epithelial,Dendritic,Smooth-muscle,NK"
@@ -47,7 +48,7 @@ do
 
     fi
     echo -e "\e[31mRunning fedscgen for $dataset with $inclusion with combined=$combined and dropped=$dropped and dropped_celltypes=$dropped_celltypes and n_clients=$n_clients and batches=$batches on GPU $GPU\e[0m"
-    ./fedscgen.sh "$dataset.h5ad" "${dropped_celltypes}" $combined $dropped "$batch_out" "$n_clients" "$batches" "$GPU" &
+    ./fedscgen.sh "$dataset.h5ad" "${dropped_celltypes}" $combined $dropped "$batch_out" "$n_clients" "$batches" "$GPU" 50 false false "$SMPC" &
     GPU=$((GPU+1))
     if [ $GPU -eq $NUM_GPUS ]; then
       wait

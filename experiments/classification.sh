@@ -43,20 +43,19 @@ MODEL_REPO="${MODEL_REPO}/model.pth"
 
 
 
-# all-classes configurations
-declare -A CONFIGS
 
-CONFIGS[scgen]="$scgen"
-CONFIGS[fedscgen]="$fedscgen|--cell_key|$CELL_KEY_ALL"
-
-for config_key in "scgen" "fedscgen"; do
+for config_key in "scgen" "fedscgen" "fedscgen-smpc"; do
   echo "$config_key"
   if [ "$config_key" == "scgen" ]; then
     OUTPUT="${root_dir}/results/scgen/centralized/${DATASET}/all/classification/${MODEL}"
     ADATA="${root_dir}/results/scgen/centralized/${DATASET}/all/corrected.h5ad"
-  elif [ "$config_key" == "fedscgen" ]; then
-    OUTPUT="${root_dir}/results/scgen/federated/${DATASET}/all/BO0-C${n_clients}/classification/${MODEL}"
-    ADATA="${root_dir}/results/scgen/federated/${DATASET}/all/BO0-C${n_clients}/fed_corrected.h5ad"
+  else
+    OUTPUT="${root_dir}/results/scgen/federated/"
+    if [ "$config_key" == "fedscgen-smpc" ]; then
+      OUTPUT="${OUTPUT}/smpc"
+    fi
+    ADATA="${OUTPUT}/${DATASET}/all/BO0-C${n_clients}/fed_corrected.h5ad"
+    OUTPUT="${OUTPUT}/${DATASET}/all/BO0-C${n_clients}/classification/${MODEL}"
   fi
   echo $OUTPUT
   echo $ADATA

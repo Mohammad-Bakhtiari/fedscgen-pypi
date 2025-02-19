@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NUM_GPUS=3
+NUM_GPUS="${1:-3}"
 GPU=0
 chmod +x fedscgen.sh
 

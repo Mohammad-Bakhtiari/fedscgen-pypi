@@ -15,6 +15,7 @@ EPOCH="${10:-2}"
 BATCH_SIZE="${11:-50}"
 SNAPSHOT="${12:-flase}"
 TUNING="${13:-false}"
+SMPC="${14:-false}"
 
 # DATASET is H5AD_FILE without the extension
 DATASET=$(echo "$H5AD_FILE" | cut -f 1 -d '.')
@@ -39,13 +40,25 @@ fi
 
 root_dir="$(dirname "$PWD")"
 raw="${root_dir}/data/datasets/${H5AD_FILE}"
-output_path="${root_dir}/results/scgen/federated/${DATASET}/${INCLUSION}"
+output_path="${root_dir}/results/scgen/federated"
+if [ "$SMPC" = "true" ]; then
+    output_path="${output_path}/smpc"
+fi
+output_path="${output_path}/${DATASET}/${INCLUSION}"
 if [ "$TUNING" = "true" ]; then
-    output="${root_dir}/results/scgen/federated/param-tuning/${DATASET}/E${EPOCH}"
+  output="${root_dir}/results/scgen/federated/param-tuning"
+  if [ "$SMPC" = "true" ]; then
+    output="${output}/smpc"
+  fi
+  output="${output}/${DATASET}/E${EPOCH}"
 fi
 combine_flag=""
 if [ "$COMBINE" = "true" ]; then
     combine_flag="--combine"
+fi
+smpc_flag=""
+if [ "$SMPC" = "true" ]; then
+    smpc_flag="--smpc"
 fi
 
 for i in "${!BATCH_OUT_VALUES[@]}"; do
@@ -76,7 +89,8 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
         --gpu "$GPU" \
         --n_rounds $ROUND   \
         $combine_flag \
-        $snapshot_flag
+        $snapshot_flag \
+        $smpc_flag
     if [ "$SNAPSHOT" = "true" ]; then
         for corrected in "$output"/*.h5ad; do
           echo -e "\e[33mPCA on $corrected\e[0m \n "

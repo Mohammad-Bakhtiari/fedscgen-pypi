@@ -1,16 +1,22 @@
 #!/bin/bash
+NUM_GPUS="${1:-3}"
 
 chmod +x run_scgen.sh
 echo "Running scgen"
-./run_scgen.sh
+./run_scgen.sh "${NUM_GPUS}"
 
 chmod +x run-tuning.sh
 echo "Running tuning"
-./run-tuning.sh
+./run-tuning.sh "${NUM_GPUS}"
 
 chmod +x run-fedscgen.sh
-echo "Running fedscgen"
-./run-fedscgen.sh
+echo "Running fedscgen without SMPC"
+./run-fedscgen.sh  false "${NUM_GPUS}"
+
+chmod +x run-fedscgen.sh
+echo "Running fedscgen with SMPC"
+./run-fedscgen.sh true "${NUM_GPUS}"
+
 
 chmod +x scgen-with-batch-out.sh
 echo "Running scgen with batch out"
@@ -18,4 +24,4 @@ echo "Running scgen with batch out"
 
 chmod +x run-classification.sh
 echo "Running centralized classification using corrected data by scGen and FedscGen"
-./run-classification.sh
+./run-classification.sh "${NUM_GPUS}"
