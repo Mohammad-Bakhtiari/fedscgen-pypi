@@ -1,9 +1,9 @@
 #!/bin/bash
 NUM_GPUS="${1:-3}"
 
-chmod +x run_scgen.sh
+chmod +x run-scgen.sh
 echo "Running scgen"
-./run_scgen.sh "${NUM_GPUS}"
+./run-scgen.sh "${NUM_GPUS}"
 
 chmod +x run-tuning.sh
 echo "Running tuning"

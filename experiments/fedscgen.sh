@@ -10,19 +10,20 @@ BATCH_OUT_VALUES=($5)
 N_CLIENTS_VALUES=($6)
 BATCHES=$7
 GPU="${8:-1}"
-ROUND="${9:-8}"
-EPOCH="${10:-2}"
-BATCH_SIZE="${11:-50}"
-SNAPSHOT="${12:-flase}"
-TUNING="${13:-false}"
-SMPC="${14:-false}"
+SMPC="${9:-false}"
+ROUND="${10:-8}"
+EPOCH="${11:-2}"
+BATCH_SIZE="${12:-50}"
+SNAPSHOT="${13:-flase}"
+TUNING="${14:-false}"
+
 
 # DATASET is H5AD_FILE without the extension
 DATASET=$(echo "$H5AD_FILE" | cut -f 1 -d '.')
 
 
 
-echo $BATCHES
+echo "Running arguments: h5ad file: $H5AD_FILE, remove cell types: $REMOVE_CELL_TYPES, combine: $COMBINE, drop: $DROP, batch out values: ${BATCH_OUT_VALUES[@]}, n clients: ${N_CLIENTS_VALUES[@]}, batches: $BATCHES, gpu: $GPU, rounds: $ROUND, epoch: $EPOCH, batch size: $BATCH_SIZE, snapshot: $SNAPSHOT, tuning: $TUNING, smpc: $SMPC"
 
 # Setting up other variables based on the flags
 if [ "$COMBINE" = "true" ]; then

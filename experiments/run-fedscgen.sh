@@ -48,7 +48,7 @@ do
 
     fi
     echo -e "\e[31mRunning fedscgen for $dataset with $inclusion with combined=$combined and dropped=$dropped and dropped_celltypes=$dropped_celltypes and n_clients=$n_clients and batches=$batches on GPU $GPU\e[0m"
-    ./fedscgen.sh "$dataset.h5ad" "${dropped_celltypes}" $combined $dropped "$batch_out" "$n_clients" "$batches" "$GPU" 50 false false "$SMPC" &
+    ./fedscgen.sh "$dataset.h5ad" "${dropped_celltypes}" $combined $dropped "$batch_out" "$n_clients" "$batches" "$GPU" "$SMPC" &
     GPU=$((GPU+1))
     if [ $GPU -eq $NUM_GPUS ]; then
       wait

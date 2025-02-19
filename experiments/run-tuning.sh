@@ -1,6 +1,7 @@
 #!/bin/bash
 
 NUM_GPUS="${1:-3}"
+SMPC="${2:-false}"
 GPU=0
 chmod +x fedscgen.sh
 
@@ -20,7 +21,7 @@ for ds in "${DATASETS[@]}";do
   n_rounds=10
   epoch=1
   while true; do
-      ./fedscgen.sh "$ds.h5ad" "" false false "0" "$n_clients" "$batches" "$GPU" "$n_rounds" "$epoch" 50 true true &
+      ./fedscgen.sh "$ds.h5ad" "" false false "0" "$n_clients" "$batches" "$GPU" "$SMPC" "$n_rounds" "$epoch" 50 true true &
       GPU=$((GPU+1))
       if [ $GPU -eq $NUM_GPUS ]; then
           wait
