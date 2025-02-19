@@ -27,6 +27,8 @@ from sklearn.cluster import KMeans
 from itertools import combinations
 import copy
 from collections import Counter
+from typing import List, Dict, Union
+import crypten
 
 def set_seed(seed=SEED):
     random.seed(seed)
@@ -37,9 +39,14 @@ def set_seed(seed=SEED):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
         torch.use_deterministic_algorithms(True)
+        crypten.set_random_seed(seed)
 
 
 set_seed(SEED)
+
+def instantiate_crypten():
+    crypten.init()
+    crypten.set_default_device("cpu")
 
 
 def seed_worker(worker_id):
@@ -500,13 +507,62 @@ def calc_obsm_pca(adata_file_paths, n_components=50, common_space=False):
     return adata_files
 
 
-def aggregate(state_dicts, n_samples):
-    sample_ratios = [n / sum(n_samples) for n in n_samples]
-    global_weights = {}
-    for param in state_dicts[0].keys():
-        global_weights[param] = torch.stack(
-            [state_dicts[i][param] * sample_ratios[i] for i in range(len(state_dicts))]).sum(0)
+
+def aggregate(
+    state_dicts: Union[List[Dict[str, torch.Tensor]], List[List[crypten.cryptensor]]],
+    n_samples: Union[List[int], crypten.cryptensor],
+    smpc: bool = False,
+    param_keys: List[str] = None
+) -> Dict[str, torch.Tensor]:
+    """
+    Aggregates model weights from multiple clients using either standard federated averaging
+    or Secure Multi-Party Computation (SMPC), ensuring the output format is consistent.
+
+    Parameters
+    ----------
+    state_dicts : List[Dict[str, torch.Tensor]] (if smpc=False) or List[List[crypten.cryptensor]] (if smpc=True)
+        - If `smpc=False`: A list of state dictionaries from each client.
+        - If `smpc=True`: A list of encrypted weight lists where each index corresponds to a specific layer.
+    n_samples : List[int] (if smpc=False) or crypten.cryptensor (if smpc=True)
+        - The number of training samples per client.
+    smpc : bool
+        Whether to use Secure Multi-Party Computation (SMPC) for aggregation.
+    param_keys : List[str], optional
+        The names of model parameters (used in SMPC case).
+
+    Returns
+    -------
+    Dict[str, torch.Tensor]
+        The aggregated global model weights.
+    """
+
+    if smpc:
+        # Sum encrypted weights across clients layer-wise
+        aggregated_weights = [sum(weights) for weights in zip(*state_dicts)]
+        total_samples = sum(n_samples)
+
+        # Compute weighted average in encrypted form
+        encrypted_global_weights = {
+            param_keys[i]: aggregated_weights[i] / total_samples for i in range(len(param_keys))
+        }
+
+        # **Ensure format consistency**: Convert encrypted tensors to decrypted torch.Tensor
+        global_weights = {
+            param: torch.tensor(encrypted_global_weights[param].get_plain_text(), dtype=torch.float32)
+            for param in encrypted_global_weights
+        }
+    else:
+        # Compute sample ratios for federated averaging
+        sample_ratios = [n / sum(n_samples) for n in n_samples]
+        global_weights = {}
+
+        for param in state_dicts[0].keys():
+            global_weights[param] = torch.stack(
+                [state_dicts[i][param] * sample_ratios[i] for i in range(len(state_dicts))]
+            ).sum(0)
+
     return global_weights
+
 
 
 def average_weights(state_dicts, sample_ratios):

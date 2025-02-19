@@ -26,6 +26,7 @@ from fedscgen.scgen_utils import CustomScGen, TORCH_DTYPE
 from fedscgen.utils import set_seed
 from fedscgen.plots import single_plot
 import warnings
+import crypten
 from numba.core.errors import NumbaDeprecationWarning  # Adjust based on actual availability
 
 warnings.filterwarnings('ignore', category=DeprecationWarning)
@@ -121,12 +122,14 @@ class FedScGen(ScGen):
         Remove the batch effect from the dataset
     """
 
-    def __init__(self, init_model_path=None, **kwargs):
+    def __init__(self, init_model_path=None, smpc=True, **kwargs):
         super().__init__(init_model_path, **kwargs)
         self.unique_cell_types = np.unique(self.adata.obs[self.cell_key])
         self.adata_latent = None
         self.round = 0
         self.n_samples = self.adata.X.shape[0]
+        self.smpc = smpc
+
 
     def local_update(self, global_weights):
         """ Update the local model with global weights
@@ -142,7 +145,7 @@ class FedScGen(ScGen):
         self.round += 1
         self.set_weights(global_weights)
         self.train(n_epochs=self.epoch, early_stopping_kwargs=self.stopping, lr=self.lr, batch_size=self.batch_size)
-        return self.get_weights(), self.n_samples
+        return self.get_local_updates()
 
     def find_batch_size(self):
         """ Find the number of cells in each batch
@@ -284,6 +287,20 @@ class FedScGen(ScGen):
         if return_latent:
             corrected.obsm["latent_corrected"] = self.get_latent(corrected.X)
         return corrected
+
+    def get_local_updates(self):
+        """ Get the local updates
+        Returns
+        -------
+        dict, int for without SMPC
+        crypten.cryptensor, crypten.cryptensor for with SMPC
+        """
+        if self.smpc:
+            encrypted_weights = []
+            for param in self.get_weights().values():
+                encrypted_weights.append(crypten.cryptensor(np.multiply(param, self.n_samples)))
+            return encrypted_weights, crypten.cryptensor(self.n_samples)
+        return self.get_weights(), self.n_samples
 
     def get_weights(self):
         """ Get the weights of the model

@@ -7,7 +7,7 @@ import ast
 import os
 from fedscgen.FedScGen import FedScGen
 from fedscgen.utils import testset_combination, aggregate, aggregate_batch_sizes, remove_cell_types, combine_cell_types, \
-    get_cuda_device, abs_diff_centrally_corrected
+    get_cuda_device, abs_diff_centrally_corrected, instantiate_crypten
 from fedscgen.plots import translate, single_plot
 
 
@@ -34,6 +34,8 @@ def update_clients(clients, g_weights):
 
 
 def main(args):
+    if args.smpc:
+        instantiate_crypten()
     adata = anndata.read_h5ad(args.adata)
     if args.combine:
         adata = combine_cell_types(adata, args.remove_cell_types, args.cell_key)
@@ -50,7 +52,8 @@ def main(args):
               "batch_size": args.batch_size,
               "stopping": args.early_stopping_kwargs,
               "overwrite": False,
-              "device": args.device
+              "device": args.device,
+              "smpc": args.smpc
               }
 
     batch_type = type(adata.obs.batch.values.tolist()[0])
@@ -83,7 +86,7 @@ def main(args):
             print(f"Round {r}/{args.n_rounds} of communication...")
             local_weights, local_n_samples = update_clients(clients, global_weights)
             print("Aggregating weights...")
-            global_weights = aggregate(local_weights, local_n_samples)
+            global_weights = aggregate(local_weights, local_n_samples, args.smpc, list(global_weights.keys()))
 
             if args.per_round_snapshots:
                 correction_snapshot(clients, global_weights, f"{args.output}/{translate(str(test_batches))}",
@@ -194,6 +197,7 @@ if __name__ == '__main__':
     parser.add_argument("--remove_cell_types", type=str, default="")
     parser.add_argument("--combine", action='store_true', default=False)
     parser.add_argument("--per_round_snapshots", action='store_true', default=False)
+    parser.add_argument("--smpc", action='store_true', default=False)
     args = parser.parse_args()
 
     args.hidden_size = [int(num) for num in args.hidden_size.replace(" ", "").split(",")]
