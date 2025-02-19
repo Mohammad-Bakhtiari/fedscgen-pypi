@@ -7,7 +7,7 @@ import ast
 import os
 from fedscgen.FedScGen import FedScGen
 from fedscgen.utils import testset_combination, aggregate, aggregate_batch_sizes, remove_cell_types, combine_cell_types, \
-    get_cuda_device, abs_diff_centrally_corrected, instantiate_crypten
+    get_cuda_device, abs_diff_centrally_corrected
 from fedscgen.plots import translate, single_plot
 
 
@@ -34,8 +34,6 @@ def update_clients(clients, g_weights):
 
 
 def main(args):
-    if args.smpc:
-        instantiate_crypten()
     adata = anndata.read_h5ad(args.adata)
     if args.combine:
         adata = combine_cell_types(adata, args.remove_cell_types, args.cell_key)

@@ -40,15 +40,13 @@ def set_seed(seed=SEED):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
         torch.use_deterministic_algorithms(True)
+        crypten.init()
+        crypten.set_default_device("cpu")
         cfg.debug.debug_mode = True
         crypten.manual_seed(seed, seed, seed)
 
 
 set_seed(SEED)
-
-def instantiate_crypten():
-    crypten.init()
-    crypten.set_default_device("cpu")
 
 
 def seed_worker(worker_id):
