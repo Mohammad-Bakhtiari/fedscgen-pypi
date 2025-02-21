@@ -289,17 +289,20 @@ class FedScGen(ScGen):
         return corrected
 
     def get_local_updates(self):
-        """ Get the local updates
+        """Get the local updates.
+
         Returns
         -------
-        dict, int for without SMPC
-        crypten.cryptensor, crypten.cryptensor for with SMPC
+        dict, int : Without SMPC
+        list of crypten.cryptensor, crypten.cryptensor : With SMPC
         """
         if self.smpc:
-            encrypted_weights = []
-            for param in self.get_weights().values():
-                encrypted_weights.append(crypten.cryptensor(np.multiply(param, self.n_samples)))
+            encrypted_weights = [
+                crypten.cryptensor(torch.mul(param, self.n_samples))
+                for param in self.get_weights().values()
+            ]
             return encrypted_weights, crypten.cryptensor(self.n_samples)
+
         return self.get_weights(), self.n_samples
 
     def get_weights(self):
