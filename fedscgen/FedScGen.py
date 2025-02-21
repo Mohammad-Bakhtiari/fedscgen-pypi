@@ -301,7 +301,8 @@ class FedScGen(ScGen):
                 crypten.cryptensor(torch.mul(param, self.n_samples))
                 for param in self.get_weights().values()
             ]
-            return encrypted_weights, crypten.cryptensor(self.n_samples)
+            encrypted_n_samples = crypten.cryptensor(torch.tensor(self.n_samples, device=self.device))
+            return encrypted_weights, encrypted_n_samples
 
         return self.get_weights(), self.n_samples
 
