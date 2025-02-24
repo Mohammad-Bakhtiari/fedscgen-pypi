@@ -560,7 +560,7 @@ def aggregate(
 
         # **Ensure format consistency**: Convert encrypted tensors to decrypted torch.Tensor
         global_weights = {
-            param: torch.tensor(encrypted_global_weights[param].get_plain_text(), dtype=torch.float32)
+            param: encrypted_global_weights[param].get_plain_text().clone().detach().to(torch.float32)
             for param in encrypted_global_weights
         }
     else:
