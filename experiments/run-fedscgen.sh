@@ -6,7 +6,7 @@ chmod +x fedscgen.sh
 
 GPU=0
 DATASETS=(HumanDendriticCells MouseCellAtlas HumanPancreas PBMC CellLine MouseRetina MouseBrain MouseHematopoieticStemProgenitorCells)
-DATASETS=(CellLine)
+
 DROPPED_CELLTYPES=( ""
  "Epithelial,Dendritic,Smooth-muscle,NK"
   "stellate,endothelial,mesenchymal,macrophage,mast,epsilon,schwann,t_cell,MHC class II"
@@ -15,7 +15,7 @@ DROPPED_CELLTYPES=( ""
    "ganglion,vascular_endothelium,horizontal,fibroblasts,microglia,pericytes,astrocytes"
    "Olfactory ensheathing cells,Choroid_plexus,Mitotic"
    "MPP,LTHSC,LMPP,Unsorted")
-DROPPED_CELLTYPES=("")
+
 
 for index in "${!DATASETS[@]}"
 do
