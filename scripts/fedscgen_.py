@@ -13,7 +13,7 @@ import torch
 import numpy as np
 
 
-def update_clients(clients, g_weights):
+def update_clients(clients, g_weights, smpc):
     """
     Update the clients with the global weights and return the updated weights and the number of samples in each client.
     Parameters
@@ -25,6 +25,8 @@ def update_clients(clients, g_weights):
     -------
 
     """
+    if smpc:
+        return [c.local_update(g_weights) for c in clients]
     weights = []
     n_samples = []
     for c in clients:
@@ -33,6 +35,7 @@ def update_clients(clients, g_weights):
         weights.append(w)
         n_samples.append(n_s)
     return weights, n_samples
+
 
 
 def main(args):
@@ -84,9 +87,13 @@ def main(args):
         # training
         for r in range(1, args.n_rounds + 1):
             print(f"Round {r}/{args.n_rounds} of communication...")
-            local_weights, local_n_samples = update_clients(clients, global_weights)
+
+            local_updates = update_clients(clients, global_weights, args.smpc)
             print("Aggregating weights...")
-            global_weights = aggregate(local_weights, local_n_samples, args.smpc, list(global_weights.keys()))
+            if args.smpc:
+                global_weights = aggregate(local_updates, None, smpc=True, param_keys=list(global_weights.keys()))
+            else:
+                global_weights = aggregate(*local_updates)
             for name, param in global_weights.items():
                 if torch.isnan(param).any() or torch.isinf(param).any():
                     print(f"⚠️ Aggregation: NaN or Inf found in {name} after aggregation!")

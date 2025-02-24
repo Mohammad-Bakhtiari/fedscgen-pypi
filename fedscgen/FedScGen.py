@@ -300,15 +300,17 @@ class FedScGen(ScGen):
         list of crypten.cryptensor, crypten.cryptensor : With SMPC
         """
         if self.smpc:
-            encrypted_weights = [
-                crypten.cryptensor(torch.mul(param, self.n_samples))
-                for param in self.get_weights().values()
-            ]
+            # encrypted_weights = [
+            #     crypten.cryptensor(torch.mul(param, self.n_samples))
+            #     for param in self.get_weights().values()
+            # ]
+            encrypted_weights = [crypten.cryptensor(param) for param in self.get_weights().values()]
             for name, param in self.get_weights().items():
                 if torch.isnan(param).any() or torch.isinf(param).any():
                     print(f"Weight send ⚠️ NaN or Inf found in {name} after aggregation!")
-            encrypted_n_samples = crypten.cryptensor(torch.tensor(self.n_samples, device=self.device))
-            return encrypted_weights, encrypted_n_samples
+            # encrypted_n_samples = crypten.cryptensor(torch.tensor(self.n_samples, device=self.device))
+            # return encrypted_weights, encrypted_n_samples
+            return encrypted_weights
 
         return self.get_weights(), self.n_samples
 

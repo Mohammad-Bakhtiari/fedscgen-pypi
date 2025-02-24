@@ -523,7 +523,7 @@ def calc_obsm_pca(adata_file_paths, n_components=50, common_space=False):
 
 def aggregate(
     state_dicts: Union[List[Dict[str, torch.Tensor]], List[List[crypten.cryptensor]]],
-    n_samples: Union[List[int], crypten.cryptensor],
+    n_samples: Union[List[int], crypten.cryptensor] = None,
     smpc: bool = False,
     param_keys: List[str] = None
 ) -> Dict[str, torch.Tensor]:
@@ -552,11 +552,15 @@ def aggregate(
     if smpc:
         # Sum encrypted weights across clients layer-wise
         aggregated_weights = [sum(weights) for weights in zip(*state_dicts)]
-        total_samples = sum(n_samples)
+        # total_samples = sum(n_samples)
+        n_clients = len(state_dicts)
 
         # Compute weighted average in encrypted form
+        # encrypted_global_weights = {
+        #     param_keys[i]: aggregated_weights[i] / total_samples for i in range(len(param_keys))
+        # }
         encrypted_global_weights = {
-            param_keys[i]: aggregated_weights[i] / total_samples for i in range(len(param_keys))
+            param_keys[i]: aggregated_weights[i] / n_clients for i in range(len(param_keys))
         }
 
         # **Ensure format consistency**: Convert encrypted tensors to decrypted torch.Tensor
