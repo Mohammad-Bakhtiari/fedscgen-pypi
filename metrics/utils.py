@@ -15,9 +15,19 @@ from statsmodels.stats.multitest import multipletests
 from sklearn.metrics import silhouette_score
 import pandas as pd
 import random
-# Set seeds
-np.random.seed(42)
-random.seed(42)
+import torch
+
+SEED = 42
+def set_seed(seed=SEED):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        torch.use_deterministic_algorithms(True)
+set_seed()
 
 HEX_COLORS = [
     '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',

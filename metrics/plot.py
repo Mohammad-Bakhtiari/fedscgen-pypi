@@ -1,6 +1,4 @@
 import copy
-
-from utils import bar_plot_subplot, DATASETS, DATASETS_ACRONYM
 import seaborn as sns
 import matplotlib.cm as cm
 import matplotlib.colors as colors
@@ -12,7 +10,7 @@ from statsmodels.stats.multitest import multipletests
 import matplotlib.pyplot as plt
 import itertools
 import argparse
-from utils import DATASETS_COLORS, DATASETS_MARKERS
+from utils import DATASETS_COLORS, DATASETS_MARKERS, DATASETS_ACRONYM, DATASETS
 import glob
 import sys
 from pathlib import Path
@@ -21,9 +19,7 @@ from pathlib import Path
 parent_dir = str(Path(__file__).resolve().parent.parent)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
-from fedscgen.utils import set_seed
 
-set_seed()
 
 
 def read_metrics_files(data_dir, filename="metrics.csv"):

@@ -13,9 +13,27 @@ from pathlib import Path
 parent_dir = str(Path(__file__).resolve().parent.parent)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
-from fedscgen.utils import set_seed, calc_obsm_pca
 
-set_seed()
+from sklearn.decomposition import PCA
+
+
+
+def calc_obsm_pca(adata_file_paths, n_components=50, common_space=False):
+    adata_files = {}
+    if common_space:
+        pca = PCA(n_components=n_components, svd_solver='full')
+    for counter, (key, path) in enumerate(adata_file_paths.items()):
+        adata = anndata.read_h5ad(path)
+        if not common_space:
+            pca = PCA(n_components=n_components, svd_solver='full')
+            pca.fit(adata.X)
+        elif counter == 0:
+            pca.fit(adata.X)
+
+        adata.obsm[f'pca_{n_components}'] = pca.transform(adata.X)
+        adata_files[key] = adata
+
+    return adata_files
 
 
 def calculate_and_plot_metrics(adata_dict, batch_key, cell_key, plot_name, overwrite=False, n_components=50):
