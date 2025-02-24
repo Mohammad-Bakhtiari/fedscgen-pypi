@@ -159,25 +159,37 @@ def evaluate(model, val, criterion, num_classes, device):
     model.eval()
     val_loss = 0.0
     total = 0
-    auc = torchmetrics.AUROC(num_classes=num_classes, average="macro", task='multiclass').to(device)
-    acc = torchmetrics.Accuracy(task="multiclass", num_classes=num_classes).to(device)
-    auc.reset()
-    acc.reset()
+
+    # Initialize metrics on CPU (to avoid `torch.cumsum` GPU issue)
+    auc = torchmetrics.AUROC(num_classes=num_classes, average="macro", task="multiclass").cpu()
+    acc = torchmetrics.Accuracy(task="multiclass", num_classes=num_classes).cpu()
+
     with torch.no_grad():
         for batch_x, batch_y in val:
             d_size = batch_y.size(0)
             batch_x = batch_x.to(device)
             batch_y = batch_y.to(device)
+
             outputs = model(batch_x)
             loss = criterion(outputs, batch_y)
             val_loss += loss.item() * d_size
-            acc(outputs.argmax(dim=1), batch_y)
-            auc(F.softmax(outputs, dim=1), batch_y)
+
+            # Move outputs & labels to CPU before computing metrics
+            acc.update(outputs.argmax(dim=1).cpu(), batch_y.cpu())
+            auc.update(F.softmax(outputs, dim=1).cpu(), batch_y.cpu())
+
             total += d_size
-        size = len(val.dataset)
-        val_loss /= size
+
+        # Compute final metric values
         acc_score = acc.compute().item()
         auc_score = auc.compute().item()
+        acc.reset()
+        auc.reset()
+
+        # Ensure correct dataset size handling
+        size = total if total > 0 else len(val.dataset)
+        val_loss /= size
+
     return val_loss, acc_score, auc_score
 
 
