@@ -22,7 +22,7 @@ cd /experiments
 ```bash
 conda env create -f r_eval.yml
 conda activate r_eval
-Rscript install_packages.R
+Rscript install_libraries.R
 cd /metrics
 ```
  4- Run the [evaluation.sh](/metrics/evaluation.sh) which includes the following experiments to evaluate the performance of the corrected data.
