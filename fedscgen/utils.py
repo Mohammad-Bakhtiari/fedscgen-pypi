@@ -43,7 +43,7 @@ def set_seed(seed=SEED):
     crypten.init()
     cfg.debug.debug_mode = True
     crypten.manual_seed(seed, seed, seed)
-    cfg.encoder.precision_bits = 32
+    cfg.encoder.precision_bits = 64
 
 
 set_seed(SEED)
