@@ -123,7 +123,7 @@ def evaluate_correction(adata, clients, test_clients, global_model, test_batches
     print(" Centralized correction of data")
     centrally_corrected = global_model.model.batch_removal(adata, batch_key=batch_key, cell_label_key=cell_key,
                                                            return_latent=True)
-    print(f"🚨 Checking for NaNs in data: {np.isnan(data.X).sum()} NaNs found")
+    print(f"🚨 Checking for NaNs in data: {np.isnan(adata.X).sum()} NaNs found")
     single_plot(centrally_corrected, batch_key, cell_key, output, "_centrally_corrected.png")
     print("Evaluating the performance of the batch effect correction Without new studies...")
     mlg = post_training_correction_wf(clients)
