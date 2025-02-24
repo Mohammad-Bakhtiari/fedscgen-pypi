@@ -28,8 +28,11 @@ from itertools import combinations
 import copy
 from collections import Counter
 from typing import List, Dict, Union
-import crypten
-from crypten.config import cfg
+if not os.getenv("IGNORE_CRYPTEN"):
+    import crypten
+    from crypten.config import cfg
+else:
+    print("Crypten is ignored.")
 
 def set_seed(seed=SEED):
     random.seed(seed)
