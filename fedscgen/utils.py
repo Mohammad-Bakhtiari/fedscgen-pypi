@@ -396,7 +396,7 @@ def instantiate_model(input_size, n_classes, lr, init_model, model_name, hidden_
 
 def load_dataloaders(x_train, y_train, x_test, y_test, batch_size=32):
     # Convert the data to PyTorch tensors and create DataLoader objects
-    num_workers=0
+    num_workers=4
     train_dataset = TensorDataset(torch.tensor(x_train), torch.tensor(y_train))
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True,
                               worker_init_fn=seed_worker, num_workers=num_workers)
