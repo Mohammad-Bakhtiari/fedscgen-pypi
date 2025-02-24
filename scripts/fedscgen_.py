@@ -9,7 +9,7 @@ from fedscgen.FedScGen import FedScGen
 from fedscgen.utils import testset_combination, aggregate, aggregate_batch_sizes, remove_cell_types, combine_cell_types, \
     get_cuda_device, abs_diff_centrally_corrected
 from fedscgen.plots import translate, single_plot
-
+import torch
 
 def update_clients(clients, g_weights):
     """
@@ -85,6 +85,9 @@ def main(args):
             local_weights, local_n_samples = update_clients(clients, global_weights)
             print("Aggregating weights...")
             global_weights = aggregate(local_weights, local_n_samples, args.smpc, list(global_weights.keys()))
+            for name, param in global_weights.items():
+                if torch.isnan(param).any() or torch.isinf(param).any():
+                    print(f"⚠️ Aggregation: NaN or Inf found in {name} after aggregation!")
 
             if args.per_round_snapshots:
                 correction_snapshot(clients, global_weights, f"{args.output}/{translate(str(test_batches))}",

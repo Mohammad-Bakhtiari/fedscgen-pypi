@@ -143,6 +143,9 @@ class FedScGen(ScGen):
             The weights of the local model and the number of samples in the local dataset
         """
         self.round += 1
+        for name, param in global_weights.items():
+            if torch.isnan(param).any() or torch.isinf(param).any():
+                print(f"Weight receive: ⚠️ NaN or Inf found in {name} after aggregation!")
         self.set_weights(global_weights)
         self.train(n_epochs=self.epoch, early_stopping_kwargs=self.stopping, lr=self.lr, batch_size=self.batch_size)
         return self.get_local_updates()
@@ -301,6 +304,9 @@ class FedScGen(ScGen):
                 crypten.cryptensor(torch.mul(param, self.n_samples))
                 for param in self.get_weights().values()
             ]
+            for name, param in self.get_weights().items():
+                if torch.isnan(param).any() or torch.isinf(param).any():
+                    print(f"Weight send ⚠️ NaN or Inf found in {name} after aggregation!")
             encrypted_n_samples = crypten.cryptensor(torch.tensor(self.n_samples, device=self.device))
             return encrypted_weights, encrypted_n_samples
 
