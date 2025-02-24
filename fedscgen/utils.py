@@ -43,6 +43,7 @@ def set_seed(seed=SEED):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
         torch.use_deterministic_algorithms(True)
+    if not os.getenv("IGNORE_CRYPTEN"):
         crypten.init()
         cfg.debug.debug_mode = True
         crypten.manual_seed(seed, seed, seed)
