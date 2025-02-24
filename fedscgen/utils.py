@@ -28,11 +28,8 @@ from itertools import combinations
 import copy
 from collections import Counter
 from typing import List, Dict, Union
-if not os.getenv("IGNORE_CRYPTEN"):
-    import crypten
-    from crypten.config import cfg
-else:
-    print("Crypten is ignored.")
+import crypten
+from crypten.config import cfg
 
 def set_seed(seed=SEED):
     random.seed(seed)
@@ -43,10 +40,9 @@ def set_seed(seed=SEED):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
         torch.use_deterministic_algorithms(True)
-    if not os.getenv("IGNORE_CRYPTEN"):
-        crypten.init()
-        cfg.debug.debug_mode = True
-        crypten.manual_seed(seed, seed, seed)
+    crypten.init()
+    cfg.debug.debug_mode = True
+    crypten.manual_seed(seed, seed, seed)
 
 
 set_seed(SEED)
