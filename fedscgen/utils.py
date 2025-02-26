@@ -31,15 +31,21 @@ from typing import List, Dict, Union
 import crypten
 from crypten.config import cfg
 
-def set_seed(seed=SEED):
+
+def set_seed(seed=None):
+    """Sets the seed for reproducibility. Checks for an environment variable first, then defaults to SEED."""
+    seed = int(os.getenv("RANDOM_SEED", SEED)) if seed is None else seed
+
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
         torch.use_deterministic_algorithms(True)
+
     crypten.init()
     cfg.debug.debug_mode = True
     crypten.manual_seed(seed, seed, seed)
