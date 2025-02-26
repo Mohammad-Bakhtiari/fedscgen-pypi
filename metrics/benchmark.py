@@ -259,10 +259,18 @@ def load_metrics_and_plot(df_path, plot_name):
 def compute_p_values(fedscgen_df, scgen_df):
     """Computes p-values using Wilcoxon signed-rank test for paired samples."""
     p_values = {}
+
     for metric in fedscgen_df.columns:
-        _, p_val = wilcoxon(fedscgen_df[metric], scgen_df[metric])
-        p_values[metric] = p_val
+        diffs = fedscgen_df[metric] - scgen_df[metric]
+
+        if np.all(diffs == 0):  # Check if all differences are zero
+            p_values[metric] = 1.0  # Assign p-value of 1 (no difference)
+        else:
+            _, p_val = wilcoxon(fedscgen_df[metric], scgen_df[metric])
+            p_values[metric] = p_val
+
     return pd.Series(p_values)
+
 
 def significance_marker(p):
     """Returns significance markers based on p-values."""
