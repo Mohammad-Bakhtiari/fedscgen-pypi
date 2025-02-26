@@ -257,33 +257,35 @@ def load_metrics_and_plot(df_path, plot_name):
     plot_metrics_with_circles(df, plot_name.replace(".", "-circle."))
 
 
-
-
 def compute_p_values(fedscgen_df, scgen_df):
-    """Computes p-values using Wilcoxon signed-rank test for paired samples."""
-    p_values = {}
-    sample_sizes = {}
+    """Computes p-values using Wilcoxon signed-rank test for paired samples, per dataset."""
+    p_values = pd.DataFrame(index=fedscgen_df.index, columns=fedscgen_df.columns)
+    sample_sizes = pd.DataFrame(index=fedscgen_df.index, columns=fedscgen_df.columns)
 
     for metric in fedscgen_df.columns:
-        diffs = fedscgen_df[metric] - scgen_df[metric]
-        sample_size = len(diffs)
-        sample_sizes[metric] = sample_size
+        for dataset in fedscgen_df.index:
+            sample_size = fedscgen_df.loc[dataset, metric].count()  # Count non-null values
+            sample_sizes.loc[dataset, metric] = sample_size  # Store sample size
 
-        if np.all(diffs == 0):  # Check if all differences are zero
-            p_values[metric] = 1.0  # Assign a non-significant p-value
-            print(f"Info: Skipping Wilcoxon test for {metric} as all values are identical. Sample size: {sample_size}")
-        else:
-            try:
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", category=UserWarning)  # Suppress scipy normal approximation warnings
-                    _, p_val = wilcoxon(fedscgen_df[metric], scgen_df[metric], zero_method='wilcox')
-                    p_values[metric] = p_val
-            except ValueError:
-                print(f"Warning: Wilcoxon test failed for {metric} due to zero differences. Sample size: {sample_size}")
-                p_values[metric] = 1.0  # Assign a fallback p-value
+            diffs = fedscgen_df.loc[dataset, metric] - scgen_df.loc[dataset, metric]
 
-    return pd.Series(p_values), pd.Series(sample_sizes)
+            if np.all(diffs == 0):  # Check if all differences are zero
+                p_values.loc[dataset, metric] = 1.0  # Assign non-significant p-value
+                print(
+                    f"Info: Skipping Wilcoxon test for {dataset} - {metric} (all values identical). Sample size: {sample_size}")
+            else:
+                try:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore", category=UserWarning)  # Suppress warnings
+                        _, p_val = wilcoxon(fedscgen_df.loc[dataset, metric], scgen_df.loc[dataset, metric],
+                                            zero_method='wilcox')
+                        p_values.loc[dataset, metric] = p_val
+                except ValueError:
+                    print(
+                        f"Warning: Wilcoxon test failed for {dataset} - {metric} due to zero differences. Sample size: {sample_size}")
+                    p_values.loc[dataset, metric] = 1.0  # Assign fallback p-value
 
+    return p_values, sample_sizes
 
 
 def significance_marker(p):
@@ -301,19 +303,32 @@ def calculate_statistical_significance(fed_data_dir, inclusion):
     file_path = os.path.join(fed_data_dir, f"fed_cent_metrics-{inclusion}.csv")
     output_dir = fed_data_dir
     df = pd.read_csv(file_path)
+
+    print("Loaded Data:")
     print(df.head())
+
     fedscgen_df = df[df["Approach"] == "FedscGen"].set_index("Dataset").drop(columns=["Approach"])
-    print(fedscgen_df.head())
     scgen_df = df[df["Approach"] == "scGen"].set_index("Dataset").drop(columns=["Approach"])
+
+    print("FedscGen Data:")
+    print(fedscgen_df.head())
+
+    print("ScGen Data:")
     print(scgen_df.head())
+
     p_values, sample_sizes = compute_p_values(fedscgen_df, scgen_df)
-    significance_df = p_values.apply(significance_marker)
+    significance_df = p_values.applymap(significance_marker)
     diff_df = fedscgen_df - scgen_df
+
+    print("Performance Differences:")
     print(diff_df.head())
+
     diff_df.to_csv(os.path.join(output_dir, f"performance_diff-{inclusion}.csv"))
     p_values.to_csv(os.path.join(output_dir, f"p_values-{inclusion}.csv"))
     significance_df.to_csv(os.path.join(output_dir, f"significance-{inclusion}.csv"))
     sample_sizes.to_csv(os.path.join(output_dir, f"sample_sizes-{inclusion}.csv"))
+
+    print("Significance analysis completed and results saved.")
 
 
 
