@@ -3,6 +3,7 @@ import pandas as pd
 import anndata
 import argparse
 import os
+import warnings
 from scarches.metrics import nmi, entropy_batch_mixing, asw
 from scipy.stats import wilcoxon
 from utils import (graph_connectivity_score, isolated_label_f1_score, ari_score, bar_plot, plot_metrics_with_circles,
@@ -256,25 +257,33 @@ def load_metrics_and_plot(df_path, plot_name):
     plot_metrics_with_circles(df, plot_name.replace(".", "-circle."))
 
 
+
+
 def compute_p_values(fedscgen_df, scgen_df):
     """Computes p-values using Wilcoxon signed-rank test for paired samples."""
     p_values = {}
+    sample_sizes = {}
 
     for metric in fedscgen_df.columns:
         diffs = fedscgen_df[metric] - scgen_df[metric]
+        sample_size = len(diffs)
+        sample_sizes[metric] = sample_size
 
-        # If all differences are zero, assign p-value of 1 (no significant difference)
-        if np.all(diffs == 0):
-            p_values[metric] = 1.0
+        if np.all(diffs == 0):  # Check if all differences are zero
+            p_values[metric] = 1.0  # Assign a non-significant p-value
+            print(f"Info: Skipping Wilcoxon test for {metric} as all values are identical. Sample size: {sample_size}")
         else:
             try:
-                _, p_val = wilcoxon(fedscgen_df[metric], scgen_df[metric], zero_method='wilcox')
-                p_values[metric] = p_val
-            except ValueError as e:
-                print(f"Warning: Wilcoxon test failed for {metric} due to zero differences.")
-                p_values[metric] = 1.0  # Assign a non-significant p-value
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=UserWarning)  # Suppress scipy normal approximation warnings
+                    _, p_val = wilcoxon(fedscgen_df[metric], scgen_df[metric], zero_method='wilcox')
+                    p_values[metric] = p_val
+            except ValueError:
+                print(f"Warning: Wilcoxon test failed for {metric} due to zero differences. Sample size: {sample_size}")
+                p_values[metric] = 1.0  # Assign a fallback p-value
 
-    return pd.Series(p_values)
+    return pd.Series(p_values), pd.Series(sample_sizes)
+
 
 
 def significance_marker(p):
@@ -294,12 +303,13 @@ def calculate_statistical_significance(fed_data_dir, inclusion):
     df = pd.read_csv(file_path)
     fedscgen_df = df[df["Approach"] == "FedscGen"].drop(columns=["Approach", "Dataset"])
     scgen_df = df[df["Approach"] == "scGen"].drop(columns=["Approach", "Dataset"])
-    p_values = compute_p_values(fedscgen_df, scgen_df)
+    p_values, sample_sizes = compute_p_values(fedscgen_df, scgen_df)
     significance_df = p_values.apply(significance_marker)
     diff_df = fedscgen_df - scgen_df
     diff_df.to_csv(os.path.join(output_dir, f"performance_diff-{inclusion}.csv"))
     p_values.to_csv(os.path.join(output_dir, f"p_values-{inclusion}.csv"))
     significance_df.to_csv(os.path.join(output_dir, f"significance-{inclusion}.csv"))
+    sample_sizes.to_csv(os.path.join(output_dir, f"sample_sizes-{inclusion}.csv"))
 
 
 
