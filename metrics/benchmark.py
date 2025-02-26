@@ -4,6 +4,7 @@ import anndata
 import argparse
 import os
 from scarches.metrics import nmi, entropy_batch_mixing, asw
+from scipy.stats import wilcoxon
 from utils import (graph_connectivity_score, isolated_label_f1_score, ari_score, bar_plot, plot_metrics_with_circles,
                    compute_ils, knn_accuracy, DATASETS, bar_plot_subplot)
 import sys
@@ -255,6 +256,40 @@ def load_metrics_and_plot(df_path, plot_name):
     plot_metrics_with_circles(df, plot_name.replace(".", "-circle."))
 
 
+def compute_p_values(fedscgen_df, scgen_df):
+    """Computes p-values using Wilcoxon signed-rank test for paired samples."""
+    p_values = {}
+    for metric in fedscgen_df.columns:
+        _, p_val = wilcoxon(fedscgen_df[metric], scgen_df[metric])
+        p_values[metric] = p_val
+    return pd.Series(p_values)
+
+def significance_marker(p):
+    """Returns significance markers based on p-values."""
+    if p < 0.001:
+        return "***"
+    elif p < 0.01:
+        return "**"
+    elif p < 0.05:
+        return "*"
+    else:
+        return ""
+
+def calculate_statistical_significance(fed_data_dir, inclusion):
+    file_path = os.path.join(fed_data_dir, f"fed_cent_metrics-{inclusion}.csv")
+    output_dir = fed_data_dir
+    df = pd.read_csv(file_path)
+    fedscgen_df = df[df["Approach"] == "FedscGen"].drop(columns=["Approach", "Dataset"])
+    scgen_df = df[df["Approach"] == "scGen"].drop(columns=["Approach", "Dataset"])
+    p_values = compute_p_values(fedscgen_df, scgen_df)
+    significance_df = p_values.apply(significance_marker)
+    diff_df = fedscgen_df - scgen_df
+    diff_df.to_csv(os.path.join(output_dir, f"performance_diff-{inclusion}.csv"))
+    p_values.to_csv(os.path.join(output_dir, f"p_values-{inclusion}.csv"))
+    significance_df.to_csv(os.path.join(output_dir, f"significance-{inclusion}.csv"))
+
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Calculate and Plot NMI for a set of adata files.')
 
@@ -267,7 +302,7 @@ if __name__ == "__main__":
     parser.add_argument('--cell_key', help='Cell key name.', default="cell_type")
     parser.add_argument('--batch_key', help='Batch key name.', default="batch")
     parser.add_argument("--scenarios", type=str, default="all",
-                        choices=["datasets", "batch-out", "snapshots", "tuning", "reproduce"])
+                        choices=["datasets", "batch-out", "snapshots", "tuning", "reproduce", "significance"])
     parser.add_argument("--n_rounds", type=int, default=10, help="Number of rounds for snapshots")
     parser.add_argument("--n_batches", type=int, default=10, help="Number of batches for batch-out")
     parser.add_argument("--plot_only", action="store_true", default=False, help="Plot the metrics")
@@ -292,5 +327,7 @@ if __name__ == "__main__":
         elif args.scenarios == "reproduce":
             benchmark_reproduce(args.fed_data_dir, args.data_dir, args.inclusion, args.n_components, args.batch_key,
                                 args.cell_key)
+        elif args.scenarios == "significance":
+            calculate_statistical_significance(args.fed_data_dir, args.inclusion)
         else:
             benchmark_snapshots(args.data_dir, args.n_rounds, args.n_components, args.batch_key, args.cell_key)
