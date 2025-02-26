@@ -302,9 +302,9 @@ def calculate_statistical_significance(fed_data_dir, inclusion):
     output_dir = fed_data_dir
     df = pd.read_csv(file_path)
     print(df.head())
-    fedscgen_df = df[df["Approach"] == "FedscGen"].drop(columns=["Approach", "Dataset"])
+    fedscgen_df = df[df["Approach"] == "FedscGen"].set_index("Dataset").drop(columns=["Approach"])
     print(fedscgen_df.head())
-    scgen_df = df[df["Approach"] == "scGen"].drop(columns=["Approach", "Dataset"])
+    scgen_df = df[df["Approach"] == "scGen"].set_index("Dataset").drop(columns=["Approach"])
     print(scgen_df.head())
     p_values, sample_sizes = compute_p_values(fedscgen_df, scgen_df)
     significance_df = p_values.apply(significance_marker)
