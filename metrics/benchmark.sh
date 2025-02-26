@@ -8,7 +8,7 @@ if [ "$plot_only" = "true" ]; then
   plot_only_flag="--plot_only"
 fi
 
-scenarios=("datasets" "snapshots" "batch-out" "tuning")
+scenarios=("datasets" "snapshots" "batch-out" "tuning" "significance")
 root_dir="$(dirname "$PWD")"
 
 DATASETS=("CellLine" "PBMC" "HumanPancreas" "MouseRetina" "MouseBrain" "MouseHematopoieticStemProgenitorCells" "HumanDendriticCells" "MouseCellAtlas")
@@ -20,6 +20,16 @@ if [ "$scenario" = "datasets" ]; then
     python benchmark.py --data_dir "${root_dir}/results/scgen/centralized" \
     --fed_data_dir "${root_dir}/results/scgen/federated" \
     --scenarios "datasets" \
+    --inclusion "${inclusion}" &
+  done
+  wait
+fi
+
+# significance
+if [ "$scenario" = "significance" ]; then
+  for inclusion in "all" "dropped" "combined"; do
+    python benchmark.py --fed_data_dir "${root_dir}/results/scgen/federated" \
+    --scenarios "significance" \
     --inclusion "${inclusion}" &
   done
   wait
