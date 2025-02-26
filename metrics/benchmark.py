@@ -301,11 +301,15 @@ def calculate_statistical_significance(fed_data_dir, inclusion):
     file_path = os.path.join(fed_data_dir, f"fed_cent_metrics-{inclusion}.csv")
     output_dir = fed_data_dir
     df = pd.read_csv(file_path)
+    print(df.head())
     fedscgen_df = df[df["Approach"] == "FedscGen"].drop(columns=["Approach", "Dataset"])
+    print(fedscgen_df.head())
     scgen_df = df[df["Approach"] == "scGen"].drop(columns=["Approach", "Dataset"])
+    print(scgen_df.head())
     p_values, sample_sizes = compute_p_values(fedscgen_df, scgen_df)
     significance_df = p_values.apply(significance_marker)
     diff_df = fedscgen_df - scgen_df
+    print(diff_df.head())
     diff_df.to_csv(os.path.join(output_dir, f"performance_diff-{inclusion}.csv"))
     p_values.to_csv(os.path.join(output_dir, f"p_values-{inclusion}.csv"))
     significance_df.to_csv(os.path.join(output_dir, f"significance-{inclusion}.csv"))
