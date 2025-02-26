@@ -34,7 +34,7 @@ from crypten.config import cfg
 
 def set_seed(seed=None):
     """Sets the seed for reproducibility. Checks for an environment variable first, then defaults to SEED."""
-    seed = int(os.getenv("RANDOM_SEED", SEED)) if seed is None else seed
+    seed = int(os.getenv("FedscGen_RANDOM_SEED", SEED)) if seed is None else seed
 
     random.seed(seed)
     np.random.seed(seed)
