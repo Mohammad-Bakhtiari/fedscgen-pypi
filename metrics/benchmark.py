@@ -263,11 +263,16 @@ def compute_p_values(fedscgen_df, scgen_df):
     for metric in fedscgen_df.columns:
         diffs = fedscgen_df[metric] - scgen_df[metric]
 
-        if np.all(diffs == 0):  # Check if all differences are zero
-            p_values[metric] = 1.0  # Assign p-value of 1 (no difference)
+        # If all differences are zero, assign p-value of 1 (no significant difference)
+        if np.all(diffs == 0):
+            p_values[metric] = 1.0
         else:
-            _, p_val = wilcoxon(fedscgen_df[metric], scgen_df[metric])
-            p_values[metric] = p_val
+            try:
+                _, p_val = wilcoxon(fedscgen_df[metric], scgen_df[metric], zero_method='wilcox')
+                p_values[metric] = p_val
+            except ValueError as e:
+                print(f"Warning: Wilcoxon test failed for {metric} due to zero differences.")
+                p_values[metric] = 1.0  # Assign a non-significant p-value
 
     return pd.Series(p_values)
 
