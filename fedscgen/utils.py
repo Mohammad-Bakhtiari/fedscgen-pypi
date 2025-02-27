@@ -720,6 +720,12 @@ def check_adata_nan(adata):
         print(f"🚨 Checking for NaNs in data: {n_nans} NaNs found")
 
 def check_weights_nan(weights, when):
-    for name, param in weights.items():
-        if torch.isnan(param).any() or torch.isinf(param).any():
-            print(f"⚠️ NaN or Inf found in {name} {when}!")
+    if type(weights) is list:
+        for param in weights:
+            if torch.isnan(param).any() or torch.isinf(param).any():
+                print(f"⚠️ NaN or Inf found {when}!")
+
+    else:
+        for name, param in weights.items():
+            if torch.isnan(param).any() or torch.isinf(param).any():
+                print(f"⚠️ NaN or Inf found in {name} {when}!")
