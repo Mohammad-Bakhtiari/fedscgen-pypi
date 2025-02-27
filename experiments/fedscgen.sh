@@ -11,11 +11,12 @@ N_CLIENTS_VALUES=($6)
 BATCHES=$7
 GPU="${8:-1}"
 SMPC="${9:-false}"
-ROUND="${10:-8}"
-EPOCH="${11:-2}"
-BATCH_SIZE="${12:-50}"
-SNAPSHOT="${13:-flase}"
-TUNING="${14:-false}"
+AGGREGATION="${10:-weighted_fedavg}"
+ROUND="${11:-8}"
+EPOCH="${12:-2}"
+BATCH_SIZE="${13:-50}"
+SNAPSHOT="${14:-flase}"
+TUNING="${15:-false}"
 
 
 # DATASET is H5AD_FILE without the extension
@@ -89,6 +90,7 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
         --remove_cell_types "$REMOVE_CELL_TYPES" \
         --gpu "$GPU" \
         --n_rounds $ROUND   \
+        --aggregation $AGGREGATION \
         $combine_flag \
         $snapshot_flag \
         $smpc_flag

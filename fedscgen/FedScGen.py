@@ -122,12 +122,14 @@ class FedScGen(ScGen):
         Remove the batch effect from the dataset
     """
 
-    def __init__(self, init_model_path=None, smpc=True, **kwargs):
+    def __init__(self, n_total_samples, aggregation="str", init_model_path=None, smpc=True, **kwargs):
         super().__init__(init_model_path, **kwargs)
         self.unique_cell_types = np.unique(self.adata.obs[self.cell_key])
         self.adata_latent = None
         self.round = 0
         self.n_samples = self.adata.X.shape[0]
+        self.sample_ration = self.n_samples / n_total_samples
+        self.aggregation = aggregation
         self.smpc = smpc
 
 
@@ -300,16 +302,13 @@ class FedScGen(ScGen):
         list of crypten.cryptensor, crypten.cryptensor : With SMPC
         """
         if self.smpc:
-            # encrypted_weights = [
-            #     crypten.cryptensor(torch.mul(param, self.n_samples))
-            #     for param in self.get_weights().values()
-            # ]
-            encrypted_weights = [crypten.cryptensor(param) for param in self.get_weights().values()]
+            weights = self.get_weights().values()
+            if self.aggregation == "weighted_fedavg":
+               weights = [param * self.sample_ration for param in weights]
+            encrypted_weights = [crypten.cryptensor(param) for param in weights]
             for name, param in self.get_weights().items():
                 if torch.isnan(param).any() or torch.isinf(param).any():
                     print(f"Weight send ⚠️ NaN or Inf found in {name} after aggregation!")
-            # encrypted_n_samples = crypten.cryptensor(torch.tensor(self.n_samples, device=self.device))
-            # return encrypted_weights, encrypted_n_samples
             return encrypted_weights
 
         return self.get_weights(), self.n_samples

@@ -525,7 +525,9 @@ def aggregate(
     state_dicts: Union[List[Dict[str, torch.Tensor]], List[List[crypten.cryptensor]]],
     n_samples: Union[List[int], crypten.cryptensor] = None,
     smpc: bool = False,
-    param_keys: List[str] = None
+    param_keys: List[str] = None,
+    aggregation: str = "fedavg"
+
 ) -> Dict[str, torch.Tensor]:
     """
     Aggregates model weights from multiple clients using either standard federated averaging
@@ -552,16 +554,19 @@ def aggregate(
     if smpc:
         # Sum encrypted weights across clients layer-wise
         aggregated_weights = [sum(weights) for weights in zip(*state_dicts)]
-        # total_samples = sum(n_samples)
-        n_clients = len(state_dicts)
+        if aggregation == "fedavg":
+            n_clients = len(state_dicts)
+            aggregated_weights = [w / n_clients for w in aggregated_weights]
+        # fractions applied on weights in the clients side
+        encrypted_global_weights = {
+            param_keys[i]: aggregated_weights[i] for i in range(len(param_keys))
+        }
 
         # Compute weighted average in encrypted form
         # encrypted_global_weights = {
         #     param_keys[i]: aggregated_weights[i] / total_samples for i in range(len(param_keys))
         # }
-        encrypted_global_weights = {
-            param_keys[i]: aggregated_weights[i] / n_clients for i in range(len(param_keys))
-        }
+
 
         # **Ensure format consistency**: Convert encrypted tensors to decrypted torch.Tensor
         global_weights = {
@@ -570,7 +575,10 @@ def aggregate(
         }
     else:
         # Compute sample ratios for federated averaging
-        sample_ratios = [n / sum(n_samples) for n in n_samples]
+        if aggregation == "fedavg":
+            sample_ratios = [1/len(state_dicts)] * len(state_dicts)
+        else:
+            sample_ratios = [n / sum(n_samples) for n in n_samples]
         global_weights = {}
 
         for param in state_dicts[0].keys():

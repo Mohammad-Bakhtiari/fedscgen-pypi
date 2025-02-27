@@ -18,6 +18,7 @@ def update_clients(clients, g_weights, smpc):
     Update the clients with the global weights and return the updated weights and the number of samples in each client.
     Parameters
     ----------
+    aggregation
     clients: list
     g_weights: weights of the global model
 
@@ -26,7 +27,7 @@ def update_clients(clients, g_weights, smpc):
 
     """
     if smpc:
-        return [c.local_update(g_weights) for c in clients]
+        return [c.local_update(g_weights) for c in clients], None
     weights = []
     n_samples = []
     for c in clients:
@@ -56,7 +57,9 @@ def main(args):
               "stopping": args.early_stopping_kwargs,
               "overwrite": False,
               "device": args.device,
-              "smpc": args.smpc
+              "smpc": args.smpc,
+              "aggregation": args.aggregation,
+              "n_total_samples": len(adata.X),
               }
 
     batch_type = type(adata.obs.batch.values.tolist()[0])
@@ -88,12 +91,9 @@ def main(args):
         for r in range(1, args.n_rounds + 1):
             print(f"Round {r}/{args.n_rounds} of communication...")
 
-            local_updates = update_clients(clients, global_weights, args.smpc)
+            state_dicts, n_samples = update_clients(clients, global_weights, args.smpc)
             print("Aggregating weights...")
-            if args.smpc:
-                global_weights = aggregate(local_updates, None, smpc=True, param_keys=list(global_weights.keys()))
-            else:
-                global_weights = aggregate(*local_updates)
+            global_weights = aggregate(state_dicts, n_samples, args.smpc, list(global_weights.keys()))
             for name, param in global_weights.items():
                 if torch.isnan(param).any() or torch.isinf(param).any():
                     print(f"⚠️ Aggregation: NaN or Inf found in {name} after aggregation!")
@@ -209,6 +209,7 @@ if __name__ == '__main__':
     parser.add_argument("--combine", action='store_true', default=False)
     parser.add_argument("--per_round_snapshots", action='store_true', default=False)
     parser.add_argument("--smpc", action='store_true', default=False)
+    parser.add_argument("--aggregation", type=str, default="fedavg", choices=["fedavg", "weighted_fedavg"])
     args = parser.parse_args()
 
     args.hidden_size = [int(num) for num in args.hidden_size.replace(" ", "").split(",")]
