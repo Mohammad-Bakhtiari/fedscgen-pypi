@@ -712,3 +712,14 @@ def abs_diff_centrally_corrected(centrally_corrected, fed_corrected, fed_correct
 
     df = pd.DataFrame(rows, index=indices)
     return df
+
+
+def check_adata_nan(adata):
+    n_nans = np.isnan(adata.X).sum()
+    if n_nans > 0:
+        print(f"🚨 Checking for NaNs in data: {n_nans} NaNs found")
+
+def check_weights_nan(weights, when):
+    for name, param in weights.items():
+        if torch.isnan(param).any() or torch.isinf(param).any():
+            print(f"⚠️ NaN or Inf found in {name} {when}!")

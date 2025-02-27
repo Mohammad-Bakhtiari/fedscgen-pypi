@@ -23,7 +23,7 @@ from functools import partial
 from copy import deepcopy
 import scarches as sca
 from fedscgen.scgen_utils import CustomScGen, TORCH_DTYPE
-from fedscgen.utils import set_seed
+from fedscgen.utils import set_seed, check_weights_nan
 from fedscgen.plots import single_plot
 import warnings
 import crypten
@@ -145,9 +145,7 @@ class FedScGen(ScGen):
             The weights of the local model and the number of samples in the local dataset
         """
         self.round += 1
-        for name, param in global_weights.items():
-            if torch.isnan(param).any() or torch.isinf(param).any():
-                print(f"Weight receive: ⚠️ NaN or Inf found in {name} after aggregation!")
+        check_weights_nan(global_weights, "before training")
         self.set_weights(global_weights)
         self.train(n_epochs=self.epoch, early_stopping_kwargs=self.stopping, lr=self.lr, batch_size=self.batch_size)
         return self.get_local_updates()
@@ -305,10 +303,8 @@ class FedScGen(ScGen):
             weights = self.get_weights().values()
             if self.aggregation == "weighted_fedavg":
                weights = [param * self.sample_ration for param in weights]
+            check_weights_nan(weights, "after training")
             encrypted_weights = [crypten.cryptensor(param) for param in weights]
-            for name, param in self.get_weights().items():
-                if torch.isnan(param).any() or torch.isinf(param).any():
-                    print(f"Weight send ⚠️ NaN or Inf found in {name} after aggregation!")
             return encrypted_weights
 
         return self.get_weights(), self.n_samples

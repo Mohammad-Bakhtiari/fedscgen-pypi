@@ -7,7 +7,7 @@ import ast
 import os
 from fedscgen.FedScGen import FedScGen
 from fedscgen.utils import testset_combination, aggregate, aggregate_batch_sizes, remove_cell_types, combine_cell_types, \
-    get_cuda_device, abs_diff_centrally_corrected
+    get_cuda_device, abs_diff_centrally_corrected, check_adata_nan, check_weights_nan
 from fedscgen.plots import translate, single_plot
 import torch
 import numpy as np
@@ -94,9 +94,7 @@ def main(args):
             state_dicts, n_samples = update_clients(clients, global_weights, args.smpc)
             print("Aggregating weights...")
             global_weights = aggregate(state_dicts, n_samples, args.smpc, list(global_weights.keys()))
-            for name, param in global_weights.items():
-                if torch.isnan(param).any() or torch.isinf(param).any():
-                    print(f"⚠️ Aggregation: NaN or Inf found in {name} after aggregation!")
+            check_weights_nan(global_weights, "after aggregation")
 
             if args.per_round_snapshots:
                 correction_snapshot(clients, global_weights, f"{args.output}/{translate(str(test_batches))}",
@@ -130,7 +128,7 @@ def evaluate_correction(adata, clients, test_clients, global_model, test_batches
     print(" Centralized correction of data")
     centrally_corrected = global_model.model.batch_removal(adata, batch_key=batch_key, cell_label_key=cell_key,
                                                            return_latent=True)
-    print(f"🚨 Checking for NaNs in data: {np.isnan(adata.X).sum()} NaNs found")
+    check_adata_nan(adata)
     single_plot(centrally_corrected, batch_key, cell_key, output, "_centrally_corrected.png")
     print("Evaluating the performance of the batch effect correction Without new studies...")
     mlg = post_training_correction_wf(clients)
