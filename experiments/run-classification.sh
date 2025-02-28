@@ -51,9 +51,12 @@ for model in "knn" "mlp-norm"; do
         --hidden_size "800,200" \
         --batch_out "1" \
         --gpu "$running" &
-
-      running=$((running+1))
-      [ $running -ge $N_GPUS ] && wait && running=0
+      if [ "$model" == "knn" ]; then
+        wait
+      else
+        running=$((running+1))
+        [ $running -ge $N_GPUS ] && wait && running=0
+      fi
     done
   done
 done
