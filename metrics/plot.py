@@ -679,11 +679,126 @@ def read_lisi(data_dir):
         plt.savefig(f'{data_dir}/lisi_{inclusion}.png', dpi=1000)
         plt.close()
 
+def plot_accuracy_diff(df, plot_dir):
+    # Melt the DataFrame to long format for the two difference columns
+    df_long = df.melt(
+        id_vars=['Dataset', 'Model'],
+        value_vars=['Accuracy Difference FedscGen - scGen', 'Accuracy Difference FedscGen-SMPC - scGen'],
+        var_name='Method',
+        value_name='Accuracy Difference'
+    )
+    # Create a combined column for the four combinations
+    df_long['Combination'] = df_long['Method'] + ' (' + df_long['Model'] + ')'
+    # Define the order of combinations for consistency
+    combination_order = [
+        'Accuracy Difference FedscGen - scGen (MLP)',
+        'Accuracy Difference FedscGen-SMPC - scGen (MLP)',
+        'Accuracy Difference FedscGen - scGen (KNN)',
+        'Accuracy Difference FedscGen-SMPC - scGen (KNN)'
+    ]
+    # Dictionary to rename legend values
+    legend_rename = {
+        'Accuracy Difference FedscGen - scGen (MLP)': 'MLP',
+        'Accuracy Difference FedscGen-SMPC - scGen (MLP)': 'MLP (SMPC)',
+        'Accuracy Difference FedscGen - scGen (KNN)': 'KNN',
+        'Accuracy Difference FedscGen-SMPC - scGen (KNN)': 'KNN (SMPC)'
+    }
+    # Rename the combinations using the dictionary
+    df_long['Combination'] = df_long['Combination'].map(legend_rename)
+    df_long['Dataset'] = df_long['Dataset'].map(dict(zip(DATASETS, DATASETS_ACRONYM)))
+    # Update combination_order with new names
+    combination_order = [legend_rename[combo] for combo in combination_order]
+    # Set up the plot
+    plt.figure(figsize=(15, 8))
+    ax = sns.boxplot(
+        x='Dataset',
+        y='Accuracy Difference',
+        hue='Combination',
+        data=df_long,
+        palette='Set2',
+        hue_order=combination_order
+    )
+    set_fontsize(ax, 'Accuracy Difference', 14, 12)
+    # Customize the plot
+    plt.title('Cell type classification accuracy difference of corrected data (Using FedscGen vs scGen)', fontsize=14)
+    plt.xticks(rotation=45, ha='right')
+    plt.axhline(0, color='gray', linestyle='--', linewidth=1)  # Add a reference line at 0
+
+    plt.legend(title='', bbox_to_anchor=(1.05, 1), loc='upper left')
+    # Adjust layout to prevent label cutoff
+    plt.tight_layout()
+    plt.savefig(f'{plot_dir}/classification_accuracy_difference.png', dpi=300)
+
+
+def get_classification_stats(data_dir):
+    """Reads classification accuracy files, aligns runs, and computes statistics."""
+    results = {}
+
+    for approach in ["scGen", "FedscGen", "FedscGen-SMPC"]:
+        for dataset in DATASETS:
+            for model in ["mlp-norm", "knn"]:
+                if approach == "scGen":
+                    files = glob.glob(os.path.join(data_dir, "centralized", dataset, "all", "classification", model,
+                                                   "classification_acc_*.csv"))
+                else:
+                    n_clients = 5 if dataset == "HumanPancreas" else 3 if dataset == "CellLine" else 2
+                    if approach == "FedscGen":
+                        files = glob.glob(os.path.join(data_dir, "federated", dataset, "all", f"BO0-C{n_clients}",
+                                                   "classification", model, "classification_acc_*.csv"))
+                    else:
+                        files = glob.glob(os.path.join(data_dir, "federated", "smpc", dataset, "all", f"BO0-C{n_clients}",
+                                                   "classification", model, "classification_acc_*.csv"))
+                for file in files:
+                    file_number = int(file.split("_")[-1].split(".csv")[0])  # Extract {number} from filename
+                    df = pd.read_csv(file)
+
+                    # Get best epoch for this file
+                    best_epoch = df.loc[df["Accuracy"].idxmax()]
+                    max_acc = best_epoch["Accuracy"]
+                    max_auc = best_epoch["AUC"]
+
+                    key = (dataset, model, file_number)  # Unique key for alignment
+                    if key not in results:
+                        results[key] = {}
+
+                    results[key][approach] = (max_acc, max_auc)  # Store best accuracy & AUC
+
+    return results
+
+
+def compute_accuracy_differences(results):
+    """Aligns classification stats and computes pairwise accuracy differences."""
+    aligned_data = []
+
+    for (dataset, model, file_number), values in results.items():
+        if "scGen" in values and "FedscGen" in values and "FedscGen-SMPC" in values:
+            acc_scGen, auc_scGen = values["scGen"]
+            acc_FedscGen, auc_FedscGen = values["FedscGen"]
+            acc_FedscGen_SMPC, auc_FedscGen_SMPC = values["FedscGen-SMPC"]
+
+            aligned_data.append({
+                "Dataset": dataset,
+                "Model": "MLP" if model == "mlp-norm" else model.upper(),
+                "File Number": file_number,
+                "Accuracy scGen": acc_scGen,
+                "Accuracy FedscGen": acc_FedscGen,
+                "Accuracy FedscGen-SMPC": acc_FedscGen_SMPC,
+                "Accuracy Difference FedscGen - scGen": acc_FedscGen - acc_scGen,
+                "Accuracy Difference FedscGen-SMPC - scGen": acc_FedscGen_SMPC - acc_scGen
+            })
+
+    return pd.DataFrame(aligned_data)
+
+def classification_error_bar_plot(data_dir):
+    results = get_classification_stats(data_dir)
+    accuracy_diff_df = compute_accuracy_differences(results)
+    accuracy_diff_df.to_csv(os.path.join(data_dir, "accuracy_diff.csv"), index=False)
+    plot_accuracy_diff(accuracy_diff_df, data_dir)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("Plot lineplot for the metrics")
     parser.add_argument('--scenario', type=str, choices=['datasets', 'tuning', 'batchout', 'kbet-diff',
-                                                         "scenarios", "classification", "lisi"],
+                                                         "scenarios", "classification", "lisi", "classification_error_bar"],
                         default='datasets')
     parser.add_argument('--data_dir', type=str, help='data directory')
     parser.add_argument('--bo_metrics_file', type=str,
@@ -710,5 +825,7 @@ if __name__ == '__main__':
         read_datasets_metrics(args.data_dir)
     elif args.scenario == "classification":
         read_classification(args.data_dir)
+    elif args.scenario == "classification_error_bar":
+        classification_error_bar_plot(args.data_dir)
     elif args.scenario == "lisi":
         read_lisi(args.data_dir)
