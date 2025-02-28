@@ -9,6 +9,8 @@ To reproduce the results of the paper, please follow the instructions:
 ```bash
 conda env create -f environment.yml
 conda activate fedscgen
+export SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL=True
+pip install crypten==0.4.1
 cd /experiments
 ```
 2- Run the [experiment.sh](/experiments/experiment.sh) which includes the following experiments to reproduce the results of the paper:
