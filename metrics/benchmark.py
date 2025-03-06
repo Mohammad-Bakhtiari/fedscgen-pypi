@@ -130,6 +130,35 @@ def plot_and_save(all_metrics, plot_name):
     plot_metrics_with_circles(df, plot_name.replace(".", "-circle."))
 
 
+def benchmark_dataset(file_path, n_components, batch_key, cell_key, ds_name):
+    results = anndata.read_h5ad(file_path)
+    latent_adata = anndata.AnnData(results.obsm[f'pca_{n_components}'])
+    latent_adata.obs = results.obs
+    metrics = benchmark(results, latent_adata, batch_key, cell_key, "FedscGen")
+    metrics["Dataset"] = ds_name
+    return metrics
+
+def find_all_corrected_files_path(scgen_res_dir, fedscgen_res_dir):
+    # find all "corrected.h5ad"
+    scgen_corrected_files = []
+    for root, dirs, files in os.walk(scgen_res_dir):
+        for file in files:
+            if file.endswith("corrected.h5ad"):
+                file_path = os.path.join(root, file)
+                seed = file_path.split('seed_')[1].split('/')[0] if 'seed_' in file_path else -1
+                scgen_corrected_files.append((file_path, seed))
+    fedscgen_corrected_files = []
+    for root, dirs, files in os.walk(fedscgen_res_dir):
+        for file in files:
+            if file.endswith("fed_corrected.h5ad"):
+                file_path = os.path.join(root, file)
+                seed = file_path.split('seed_')[1].split('/')[0] if 'seed_' in file_path else -1
+                fedscgen_corrected_files.append((file_path, seed))
+    for f, _ in scgen_corrected_files:
+        print(f)
+    for f, _ in fedscgen_corrected_files:
+        print(f)
+
 def benchmark_all_datasets(fed_data_dir: str, cent_data_dir: str, inclusion: str, n_components: int, batch_key: str,
                            cell_key: str):
     all_metrics = []
@@ -138,17 +167,21 @@ def benchmark_all_datasets(fed_data_dir: str, cent_data_dir: str, inclusion: str
             continue
         print(f"Processing {ds_name} {inclusion}...")
         n_clients = 5 if ds_name == "HumanPancreas" else 3 if ds_name == "CellLine" else 2
-        fedscgen = anndata.read_h5ad(
-            os.path.join(fed_data_dir, ds_name, inclusion, f"BO0-C{n_clients}", "fed_corrected.h5ad"))
-        latent_adata = anndata.AnnData(fedscgen.obsm[f'pca_{n_components}'])
-        latent_adata.obs = fedscgen.obs
-        fedscgen_metrics = benchmark(fedscgen, latent_adata, batch_key, cell_key, "FedscGen")
-        fedscgen_metrics["Dataset"] = ds_name
-        scgen = anndata.read_h5ad(os.path.join(cent_data_dir, ds_name, inclusion, "corrected.h5ad"))
-        latent_adata = anndata.AnnData(scgen.obsm[f'pca_{n_components}'])
-        latent_adata.obs = scgen.obs
-        scgen_metrics = benchmark(scgen, latent_adata, batch_key, cell_key, "scGen")
-        scgen_metrics["Dataset"] = ds_name
+        find_all_corrected_files_path(os.path.join(cent_data_dir, ds_name, inclusion), os.path.join(fed_data_dir, ds_name, inclusion))
+        exit()
+        # fedscgen = anndata.read_h5ad(
+        #     os.path.join(fed_data_dir, ds_name, inclusion, f"BO0-C{n_clients}", "fed_corrected.h5ad"))
+        # latent_adata = anndata.AnnData(fedscgen.obsm[f'pca_{n_components}'])
+        # latent_adata.obs = fedscgen.obs
+        # fedscgen_metrics = benchmark(fedscgen, latent_adata, batch_key, cell_key, "FedscGen")
+        # fedscgen_metrics["Dataset"] = ds_name
+        fedscgen_metrics = benchmark_dataset(os.path.join(fed_data_dir, ds_name, inclusion, f"BO0-C{n_clients}", "fed_corrected.h5ad"), n_components, batch_key, cell_key, ds_name)
+        scgen_metrics = benchmark_dataset(os.path.join(cent_data_dir, ds_name, inclusion, "corrected.h5ad"), n_components, batch_key, cell_key, ds_name)
+        # scgen = anndata.read_h5ad(os.path.join(cent_data_dir, ds_name, inclusion, "corrected.h5ad"))
+        # latent_adata = anndata.AnnData(scgen.obsm[f'pca_{n_components}'])
+        # latent_adata.obs = scgen.obs
+        # scgen_metrics = benchmark(scgen, latent_adata, batch_key, cell_key, "scGen")
+        # scgen_metrics["Dataset"] = ds_name
         all_metrics.extend([fedscgen_metrics, scgen_metrics])
     df = pd.DataFrame(all_metrics)
     df.to_csv(os.path.join(fed_data_dir, f"fed_cent_metrics-{inclusion}.csv"), sep=",", index=False)
