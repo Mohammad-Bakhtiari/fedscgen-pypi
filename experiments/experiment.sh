@@ -17,6 +17,14 @@ chmod +x run-fedscgen.sh
 echo "Running fedscgen with SMPC"
 ./run-fedscgen.sh true "${NUM_GPUS}"
 
+chmod +x scgen-wilcoxon.sh
+echo "Running scGen for different seeds for Wilcoxon test"
+./scgen-wilcoxon.sh "${NUM_GPUS}"
+
+chmod +x fedscgen-wilcoxon.sh
+echo "Running FedscGen with SMPC for different seeds for Wilcoxon test"
+./fedscgen-wilcoxon.sh true "${NUM_GPUS}"
+
 
 chmod +x scgen-with-batch-out.sh
 echo "Running scgen with batch out"
