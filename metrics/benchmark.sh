@@ -18,7 +18,7 @@ DATASETS=("CellLine" "PBMC" "HumanPancreas" "MouseRetina" "MouseBrain" "MouseHem
 if [ "$scenario" = "datasets" ]; then
   for inclusion in "all" "dropped" "combined"; do
     python benchmark.py --data_dir "${root_dir}/results/scgen/centralized" \
-    --fed_data_dir "${root_dir}/results/scgen/federated" \
+    --fed_data_dir "${root_dir}/results/scgen/federated/smpc" \
     --scenarios "datasets" \
     --inclusion "${inclusion}" &
   done
