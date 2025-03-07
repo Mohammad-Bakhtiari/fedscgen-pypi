@@ -2,7 +2,7 @@
 
 root_dir="$(dirname "$PWD")"
 
-#chmod +x benchmark.sh
+chmod +x benchmark.sh
 #echo "Running benchmark for param tuning of FedscGen all rounds and epochs"
 #./benchmark.sh "tuning" false
 #
