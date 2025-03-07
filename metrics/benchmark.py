@@ -130,12 +130,13 @@ def plot_and_save(all_metrics, plot_name):
     plot_metrics_with_circles(df, plot_name.replace(".", "-circle."))
 
 
-def benchmark_dataset(file_path, n_components, batch_key, cell_key, ds_name):
+def benchmark_dataset(file_path, seed, n_components, batch_key, cell_key, ds_name):
     results = anndata.read_h5ad(file_path)
     latent_adata = anndata.AnnData(results.obsm[f'pca_{n_components}'])
     latent_adata.obs = results.obs
     metrics = benchmark(results, latent_adata, batch_key, cell_key, "FedscGen")
     metrics["Dataset"] = ds_name
+    metrics["Seed"] = seed
     return metrics
 
 def find_all_corrected_files_path(scgen_res_dir, fedscgen_res_dir):
@@ -154,10 +155,7 @@ def find_all_corrected_files_path(scgen_res_dir, fedscgen_res_dir):
                 file_path = os.path.join(root, file)
                 seed = file_path.split('seed_')[1].split('/')[0] if 'seed_' in file_path else -1
                 fedscgen_corrected_files.append((file_path, seed))
-    for f, _ in scgen_corrected_files:
-        print(f)
-    for f, _ in fedscgen_corrected_files:
-        print(f)
+    return scgen_corrected_files, fedscgen_corrected_files
 
 def benchmark_all_datasets(fed_data_dir: str, cent_data_dir: str, inclusion: str, n_components: int, batch_key: str,
                            cell_key: str):
@@ -166,23 +164,13 @@ def benchmark_all_datasets(fed_data_dir: str, cent_data_dir: str, inclusion: str
         if inclusion != "all" and ds_name in ["CellLine", "HumanDendriticCells"]:
             continue
         print(f"Processing {ds_name} {inclusion}...")
-        n_clients = 5 if ds_name == "HumanPancreas" else 3 if ds_name == "CellLine" else 2
-        find_all_corrected_files_path(os.path.join(cent_data_dir, ds_name, inclusion), os.path.join(fed_data_dir, ds_name, inclusion))
-        exit()
-        # fedscgen = anndata.read_h5ad(
-        #     os.path.join(fed_data_dir, ds_name, inclusion, f"BO0-C{n_clients}", "fed_corrected.h5ad"))
-        # latent_adata = anndata.AnnData(fedscgen.obsm[f'pca_{n_components}'])
-        # latent_adata.obs = fedscgen.obs
-        # fedscgen_metrics = benchmark(fedscgen, latent_adata, batch_key, cell_key, "FedscGen")
-        # fedscgen_metrics["Dataset"] = ds_name
-        fedscgen_metrics = benchmark_dataset(os.path.join(fed_data_dir, ds_name, inclusion, f"BO0-C{n_clients}", "fed_corrected.h5ad"), n_components, batch_key, cell_key, ds_name)
-        scgen_metrics = benchmark_dataset(os.path.join(cent_data_dir, ds_name, inclusion, "corrected.h5ad"), n_components, batch_key, cell_key, ds_name)
-        # scgen = anndata.read_h5ad(os.path.join(cent_data_dir, ds_name, inclusion, "corrected.h5ad"))
-        # latent_adata = anndata.AnnData(scgen.obsm[f'pca_{n_components}'])
-        # latent_adata.obs = scgen.obs
-        # scgen_metrics = benchmark(scgen, latent_adata, batch_key, cell_key, "scGen")
-        # scgen_metrics["Dataset"] = ds_name
-        all_metrics.extend([fedscgen_metrics, scgen_metrics])
+        corrected_files = find_all_corrected_files_path(os.path.join(cent_data_dir, ds_name, inclusion), os.path.join(fed_data_dir, ds_name, inclusion))
+        for files in corrected_files:
+            for file_path, seed in files:
+                all_metrics.append(benchmark_dataset(file_path, seed, n_components, batch_key, cell_key, ds_name))
+                break
+            break
+        break
     df = pd.DataFrame(all_metrics)
     df.to_csv(os.path.join(fed_data_dir, f"fed_cent_metrics-{inclusion}.csv"), sep=",", index=False)
 
