@@ -168,9 +168,6 @@ def benchmark_all_datasets(fed_data_dir: str, cent_data_dir: str, inclusion: str
         for files in corrected_files:
             for file_path, seed in files:
                 all_metrics.append(benchmark_dataset(file_path, seed, n_components, batch_key, cell_key, ds_name))
-                break
-            break
-        break
     df = pd.DataFrame(all_metrics)
     df.to_csv(os.path.join(fed_data_dir, f"fed_cent_metrics-{inclusion}.csv"), sep=",", index=False)
 
