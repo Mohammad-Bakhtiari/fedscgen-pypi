@@ -51,3 +51,36 @@ if [[ "${scenario}" == "batch-out" ]]; then
     Rscript kbet_calculator.R "${scgen}" "${fedscgen}" "${output_dir}" "HumanPancreas"
   done
 fi
+
+
+if [[ "${scenario}" == "smpc" ]]; then
+  for dataset in "${DATASETS[@]}"; do
+    declare -A scgen_files
+    declare -A fedscgen_files
+
+    while IFS= read -r file; do
+      if [[ "$file" =~ seed_([0-9]+) ]]; then
+        seed="${BASH_REMATCH[1]}"
+        scgen_files[$seed]="$file"
+      fi
+    done < <(find "${root_dir}/results/scgen/centralized/${dataset}/all/" -type f -name "corrected.h5ad")
+
+    while IFS= read -r file; do
+      if [[ "$file" =~ seed_([0-9]+) ]]; then
+        seed="${BASH_REMATCH[1]}"
+        fedscgen_files[$seed]="$file"
+      fi
+    done < <(find "${root_dir}/results/scgen/federated/smpc/${dataset}/all/" -type f -name "fed_corrected.h5ad")
+
+    # Check if every scgen file has a matching fedscgen file
+    for seed in "${!scgen_files[@]}"; do
+      if [[ -n "${fedscgen_files[$seed]}" ]]; then
+        output_dir=$(dirname "${fedscgen_files[$seed]}")
+        echo "Running kbet_calculator.R for ${dataset} with seed ${seed}"
+        Rscript kbet_calculator.R "${scgen_files[$seed]}" "${fedscgen_files[$seed]}" "$output_dir" "$dataset"
+      else
+        echo "Warning: No matching fedscgen file found for seed ${seed} in ${dataset}" >&2
+      fi
+    done
+  done
+fi
