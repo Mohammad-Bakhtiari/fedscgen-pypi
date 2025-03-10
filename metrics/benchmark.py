@@ -167,6 +167,8 @@ def benchmark_all_datasets(fed_data_dir: str, cent_data_dir: str, inclusion: str
         corrected_files = find_all_corrected_files_path(os.path.join(cent_data_dir, ds_name, inclusion), os.path.join(fed_data_dir, ds_name, inclusion))
         for approach, files in corrected_files:
             for file_path, seed in files:
+                if '/BO1' in file_path:
+                    continue
                 try:
                     metric = benchmark_dataset(approach, file_path, seed, n_components, batch_key, cell_key, ds_name)
                     df = pd.DataFrame([metric])
