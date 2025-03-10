@@ -159,7 +159,7 @@ def find_all_corrected_files_path(scgen_res_dir, fedscgen_res_dir):
 
 def benchmark_all_datasets(fed_data_dir: str, cent_data_dir: str, inclusion: str, n_components: int, batch_key: str,
                            cell_key: str):
-    all_metrics = []
+    output_file = os.path.join(fed_data_dir, f"fed_cent_metrics-{inclusion}.csv")
     for ds_name in DATASETS:
         if inclusion != "all" and ds_name in ["CellLine", "HumanDendriticCells"]:
             continue
@@ -167,9 +167,13 @@ def benchmark_all_datasets(fed_data_dir: str, cent_data_dir: str, inclusion: str
         corrected_files = find_all_corrected_files_path(os.path.join(cent_data_dir, ds_name, inclusion), os.path.join(fed_data_dir, ds_name, inclusion))
         for files in corrected_files:
             for file_path, seed in files:
-                all_metrics.append(benchmark_dataset(file_path, seed, n_components, batch_key, cell_key, ds_name))
-    df = pd.DataFrame(all_metrics)
-    df.to_csv(os.path.join(fed_data_dir, f"fed_cent_metrics-{inclusion}.csv"), sep=",", index=False)
+                try:
+                    metric = benchmark_dataset(file_path, seed, n_components, batch_key, cell_key, ds_name)
+                    df = pd.DataFrame([metric])
+                    df.to_csv(output_file, mode='a', sep=",", index=False, header=not os.path.exists(output_file))
+                except Exception as e:
+                    print(f"Error processing dataset: {ds_name}, file: {file_path}, seed: {seed}. Error: {e}")
+                    continue  # Skip to the next file but continue processing others
 
 
 def benchmark_reproduce(fed_data_dir: str, cent_data_dir: str, inclusion: str, n_components: int, batch_key: str,
