@@ -169,6 +169,10 @@ def benchmark_all_datasets(fed_data_dir: str, cent_data_dir: str, inclusion: str
             for file_path, seed in files:
                 if '/BO1' in file_path:
                     continue
+                if os.path.exists(output_file):
+                    df = pd.read_csv(output_file)
+                    if len(df[(df["Approach"] == approach) & (df["Dataset"] == ds_name) & (df["Seed"] == seed)]) > 0:
+                        continue
                 try:
                     metric = benchmark_dataset(approach, file_path, seed, n_components, batch_key, cell_key, ds_name)
                     df = pd.DataFrame([metric])
