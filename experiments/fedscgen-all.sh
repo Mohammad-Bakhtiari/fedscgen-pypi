@@ -1,11 +1,9 @@
 #!/bin/bash
 
-SMPC="${1:-false}"
 NUM_GPUS="${2:-3}"
 GPU=0
 ROUND=8
 EPOCH=2
-BATCH_SIZE=50
 SEEDS=(42 123 456 789 101112)  # Predefined seeds
 
 DATASETS=(HumanDendriticCells MouseCellAtlas HumanPancreas PBMC CellLine MouseRetina MouseBrain MouseHematopoieticStemProgenitorCells)
@@ -15,11 +13,6 @@ root_dir="$(dirname "$PWD")"
 
 # Set output path based on SMPC flag
 output_path_prefix="${root_dir}/results/scgen/federated"
-smpc_flag=""
-if [ "$SMPC" = "true" ]; then
-  output_path_prefix="${output_path_prefix}/smpc"
-  smpc_flag="--smpc"
-fi
 
 for seed in "${SEEDS[@]}"
 do
@@ -55,7 +48,7 @@ do
         --batch_key "batch" \
         --batches "$batches" \
         --lr 0.001 \
-        --batch_size "$BATCH_SIZE" \
+        --batch_size 50 \
         --hidden_size "800,800" \
         --z_dim 10 \
         --early_stopping_kwargs '{"early_stopping_metric": "val_loss", "patience": 20, "threshold": 0, "reduce_lr": True, "lr_patience": 13, "lr_factor": 0.1}' \
@@ -63,7 +56,8 @@ do
         --n_clients "$n_clients" \
         --gpu "$GPU" \
         --n_rounds $ROUND   \
-        "$smpc_flag" &
+        --aggregation "fedavg" \
+        --smpc &
 
     GPU=$((GPU+1))
     if [ $GPU -eq "$NUM_GPUS" ]; then
