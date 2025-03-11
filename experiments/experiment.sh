@@ -21,14 +21,9 @@ chmod +x run-fedscgen.sh
 echo "Running secure fedscgen for dropped and combined inclusion scenarios"
 ./run-fedscgen.sh  "${NUM_GPUS}"
 
-
-
-chmod +x fedscgen-wilcoxon.sh
-echo "Running FedscGen with SMPC for different seeds for Wilcoxon test"
-./fedscgen-wilcoxon.sh true "${NUM_GPUS}"
-
-
-
+chmod +x fedscgen-all.sh
+echo "Running secure FedscGen with different seeds for all inclusion scenario"
+./fedscgen-all.sh "${NUM_GPUS}"
 
 chmod +x run-classification.sh
 echo "Running centralized classification using corrected data by scGen and FedscGen"
