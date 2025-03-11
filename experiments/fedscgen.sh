@@ -10,13 +10,11 @@ BATCH_OUT_VALUES=($5)
 N_CLIENTS_VALUES=($6)
 BATCHES=$7
 GPU="${8:-1}"
-SMPC="${9:-false}"
-AGGREGATION="${10:-weighted_fedavg}"
-ROUND="${11:-8}"
-EPOCH="${12:-2}"
-BATCH_SIZE="${13:-50}"
-SNAPSHOT="${14:-flase}"
-TUNING="${15:-false}"
+ROUND="${9:-8}"
+EPOCH="${10:-2}"
+BATCH_SIZE="${11:-50}"
+SNAPSHOT="${12:-flase}"
+TUNING="${13:-false}"
 
 
 # DATASET is H5AD_FILE without the extension
@@ -27,8 +25,10 @@ DATASET=$(echo "$H5AD_FILE" | cut -f 1 -d '.')
 echo "Running arguments: h5ad file: $H5AD_FILE, remove cell types: $REMOVE_CELL_TYPES, combine: $COMBINE, drop: $DROP, batch out values: ${BATCH_OUT_VALUES[@]}, n clients: ${N_CLIENTS_VALUES[@]}, batches: $BATCHES, gpu: $GPU, rounds: $ROUND, epoch: $EPOCH, batch size: $BATCH_SIZE, snapshot: $SNAPSHOT, tuning: $TUNING, smpc: $SMPC"
 
 # Setting up other variables based on the flags
+combine_flag=""
 if [ "$COMBINE" = "true" ]; then
   INCLUSION="combined"
+  combine_flag="--combine"
 elif [ "$DROP" = "true" ]; then
   INCLUSION="dropped"
 else
@@ -39,28 +39,11 @@ if [ "$SNAPSHOT" = "true" ]; then
   snapshot_flag="--per_round_snapshots"
 fi
 
-
 root_dir="$(dirname "$PWD")"
 raw="${root_dir}/data/datasets/${H5AD_FILE}"
-output_path="${root_dir}/results/scgen/federated"
-if [ "$SMPC" = "true" ]; then
-    output_path="${output_path}/smpc"
-fi
-output_path="${output_path}/${DATASET}/${INCLUSION}"
+output_path="${root_dir}/results/scgen/federated/${DATASET}/${INCLUSION}"
 if [ "$TUNING" = "true" ]; then
-  output="${root_dir}/results/scgen/federated/param-tuning"
-  if [ "$SMPC" = "true" ]; then
-    output="${output}/smpc"
-  fi
-  output="${output}/${DATASET}/E${EPOCH}"
-fi
-combine_flag=""
-if [ "$COMBINE" = "true" ]; then
-    combine_flag="--combine"
-fi
-smpc_flag=""
-if [ "$SMPC" = "true" ]; then
-    smpc_flag="--smpc"
+  output="${root_dir}/results/scgen/federated/param-tuning/${DATASET}/E${EPOCH}"
 fi
 
 for i in "${!BATCH_OUT_VALUES[@]}"; do
@@ -90,10 +73,10 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
         --remove_cell_types "$REMOVE_CELL_TYPES" \
         --gpu "$GPU" \
         --n_rounds $ROUND   \
-        --aggregation $AGGREGATION \
+        --aggregation "fed_avg" \
+        --spmc \
         $combine_flag \
-        $snapshot_flag \
-        $smpc_flag
+        "$snapshot_flag"
     if [ "$SNAPSHOT" = "true" ]; then
         for corrected in "$output"/*.h5ad; do
           echo -e "\e[33mPCA on $corrected\e[0m \n "
