@@ -2,8 +2,12 @@
 NUM_GPUS="${1:-3}"
 
 chmod +x run-scgen.sh
-echo "Running scgen"
+echo "Running scgen for combined and dropped inclusion scenarios"
 ./run-scgen.sh "${NUM_GPUS}"
+
+chmod +x scgen-all.sh
+echo "Running scGen with different seeds for all inclusion scenario"
+./scgen-wilcoxon.sh "${NUM_GPUS}"
 
 chmod +x scgen-with-batch-out.sh
 echo "Running scgen on HumanPancreas with batch out"
@@ -14,16 +18,10 @@ echo "Running tuning"
 ./run-tuning.sh "${NUM_GPUS}"
 
 chmod +x run-fedscgen.sh
-echo "Running fedscgen without SMPC"
-./run-fedscgen.sh  false "${NUM_GPUS}"
+echo "Running secure fedscgen for dropped and combined inclusion scenarios"
+./run-fedscgen.sh  "${NUM_GPUS}"
 
-chmod +x run-fedscgen.sh
-echo "Running fedscgen with SMPC"
-./run-fedscgen.sh true "${NUM_GPUS}"
 
-chmod +x scgen-wilcoxon.sh
-echo "Running scGen for different seeds for Wilcoxon test"
-./scgen-wilcoxon.sh "${NUM_GPUS}"
 
 chmod +x fedscgen-wilcoxon.sh
 echo "Running FedscGen with SMPC for different seeds for Wilcoxon test"
