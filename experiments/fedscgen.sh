@@ -73,7 +73,7 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
         --remove_cell_types "$REMOVE_CELL_TYPES" \
         --gpu "$GPU" \
         --n_rounds $ROUND   \
-        --aggregation "fed_avg" \
+        --aggregation "fedavg" \
         --spmc \
         $combine_flag \
         "$snapshot_flag"
