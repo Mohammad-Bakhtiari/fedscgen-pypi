@@ -7,7 +7,7 @@ GPU=0
 chmod +x scgen.sh
 
 
-DATASETS=(HumanDendriticCells MouseCellAtlas HumanPancreas PBMC CellLine MouseRetina MouseBrain MouseHematopoieticStemProgenitorCells)
+DATASETS=(MouseCellAtlas HumanPancreas PBMC MouseRetina MouseBrain MouseHematopoieticStemProgenitorCells)
 DROPPED_CELLTYPES=( ""
  "Epithelial,Dendritic,Smooth-muscle,NK"
   "stellate,endothelial,mesenchymal,macrophage,mast,epsilon,schwann,t_cell,MHC class II"
@@ -19,26 +19,12 @@ DROPPED_CELLTYPES=( ""
 
 for index in "${!DATASETS[@]}"
 do
-  for inclusion in all dropped combined
+  for inclusion in dropped combined
   do
-    dataset=${DATASETS[$index]}
-    dropped_celltypes=${DROPPED_CELLTYPES[$index]}
-    if [ $inclusion != "all" ]; then
-      if [ "$dataset" == "HumanDendriticCells" ] || [ "$dataset" == "CellLine" ]; then
-        continue
-      fi
-    fi
-    combined=false
-    dropped=false
-    if [ $inclusion == "combined" ]; then
-      combined=true
-    elif [ $inclusion == "dropped" ]; then
-      dropped=true
-    else
-      dropped_celltypes=""
-    fi
-    echo -e "\e[31mRunning scgen for $dataset with $inclusion with combined=$combined and dropped=$dropped and dropped_celltypes=$dropped_celltypes\e[0m"
-    ./scgen.sh "$dataset.h5ad" "${dropped_celltypes}" $combined $dropped $GPU &
+    combined=$([ "$inclusion" == "combined" ] && echo true || echo false)
+    dropped=$([ "$inclusion" == "dropped" ] && echo true || echo false)
+    echo -e "\e[31mRunning scgen for ${DATASETS[$index]} with $inclusion with combined=$combined and dropped=$dropped and dropped_celltypes=${DROPPED_CELLTYPES[$index]}\e[0m"
+    ./scgen.sh "${DATASETS[$index]}.h5ad" "${DROPPED_CELLTYPES[$index]}" "$combined" "$dropped" $GPU &
     GPU=$((GPU+1))
     if [ $GPU -eq $NUM_GPUS ]; then
       wait
