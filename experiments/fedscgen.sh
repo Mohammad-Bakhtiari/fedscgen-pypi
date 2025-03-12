@@ -22,7 +22,7 @@ DATASET=$(echo "$H5AD_FILE" | cut -f 1 -d '.')
 
 
 
-echo "Running arguments: h5ad file: $H5AD_FILE, remove cell types: $REMOVE_CELL_TYPES, combine: $COMBINE, drop: $DROP, batch out values: ${BATCH_OUT_VALUES[@]}, n clients: ${N_CLIENTS_VALUES[@]}, batches: $BATCHES, gpu: $GPU, rounds: $ROUND, epoch: $EPOCH, batch size: $BATCH_SIZE, snapshot: $SNAPSHOT, tuning: $TUNING, smpc: $SMPC"
+echo "Running arguments: h5ad file: $H5AD_FILE, remove cell types: $REMOVE_CELL_TYPES, combine: $COMBINE, drop: $DROP, batch out values: ${BATCH_OUT_VALUES[@]}, n clients: ${N_CLIENTS_VALUES[@]}, batches: $BATCHES, gpu: $GPU, rounds: $ROUND, epoch: $EPOCH, snapshot: $SNAPSHOT, tuning: $TUNING"
 
 # Setting up other variables based on the flags
 combine_flag=""
