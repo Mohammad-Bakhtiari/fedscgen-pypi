@@ -1,7 +1,7 @@
 #!/bin/bash
 
-GPU_LIST="${1:-0,1,2,3}"  # Default to GPUs 0,1,2,3 if not provided
-IFS=',' read -r -a GPUS <<< "$GPU_LIST"  # Convert GPU list to an array
+GPU_LIST="${1:-0,1,2,3}"  # Default GPUs
+IFS=',' read -r -a GPUS <<< "$GPU_LIST"  # Convert to array
 NUM_GPUS=${#GPUS[@]}  # Get the number of GPUs
 GPU_INDEX=0  # Track which GPU to use
 
@@ -9,8 +9,10 @@ GPU_INDEX=0  # Track which GPU to use
 get_next_gpu() {
     echo "DEBUG: Current GPU_INDEX before update: $GPU_INDEX" >&2  # Debugging
 
-    local gpu=${GPUS[$GPU_INDEX]}  # Select the current GPU
-    GPU_INDEX=$(( (GPU_INDEX + 1) % NUM_GPUS ))  # Cycle index globally
+    gpu=${GPUS[$GPU_INDEX]}  # Select GPU (No local keyword!)
+
+    # Update GPU_INDEX globally
+    GPU_INDEX=$(( (GPU_INDEX + 1) % NUM_GPUS ))
 
     echo "DEBUG: Next GPU_INDEX after update: $GPU_INDEX" >&2  # Debugging
     echo "$gpu"  # Return the selected GPU
