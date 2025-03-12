@@ -30,7 +30,7 @@ from collections import Counter
 from typing import List, Dict, Union
 import crypten
 from crypten.config import cfg
-
+from collections import OrderedDict
 
 def set_seed(seed=None):
     """Sets the seed for reproducibility. Checks for an environment variable first, then defaults to SEED."""
@@ -725,13 +725,24 @@ def check_adata_nan(adata):
     if n_nans > 0:
         print(f"🚨 Checking for NaNs in data: {n_nans} NaNs found")
 
+
 def check_weights_nan(weights, when):
-    if type(weights) == list:
+    # Convert odict_values to a list
+    if isinstance(weights, (dict, OrderedDict)):  # Ensure it's a dictionary-like object
+        weights = weights if isinstance(weights, dict) else dict(weights)  # Convert OrderedDict to dict
+
+        for name, param in weights.items():
+            if torch.isnan(param).any() or torch.isinf(param).any():
+                print(f"⚠️ NaN or Inf found in {name} {when}!")
+
+    elif isinstance(weights, list):  # Handle list of tensors
         for param in weights:
             if torch.isnan(param).any() or torch.isinf(param).any():
                 print(f"⚠️ NaN or Inf found {when}!")
 
+    elif isinstance(weights, torch.Tensor):  # Handle single tensor case
+        if torch.isnan(weights).any() or torch.isinf(weights).any():
+            print(f"⚠️ NaN or Inf found {when}!")
+
     else:
-        for name, param in weights.items():
-            if torch.isnan(param).any() or torch.isinf(param).any():
-                print(f"⚠️ NaN or Inf found in {name} {when}!")
+        print(f"⚠️ Unexpected type {type(weights)} in check_weights_nan {when}!")
