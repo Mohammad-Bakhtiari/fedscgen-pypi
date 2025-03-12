@@ -22,8 +22,8 @@ for ds in "${DATASETS[@]}";do
   n_rounds=10
   epoch=1
   while true; do
-      GPU=$(get_next_gpu)
-      ./fedscgen.sh "$ds.h5ad" "" false false "0" "$n_clients" "$batches" "$GPU" "$n_rounds" "$epoch" 50 true true &
+      get_next_gpu
+      ./fedscgen.sh "$ds.h5ad" "" false false "0" "$n_clients" "$batches" "$FEDSCGEN_NEXT_GPU" "$n_rounds" "$epoch" 50 true true &
       wait_for_free_gpu
       epoch=$((epoch+1))
       if [ $epoch -gt 10 ]; then
