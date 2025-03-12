@@ -726,23 +726,24 @@ def check_adata_nan(adata):
         print(f"🚨 Checking for NaNs in data: {n_nans} NaNs found")
 
 
-def check_weights_nan(weights, when):
-    # Convert odict_values to a list
-    if isinstance(weights, (dict, OrderedDict)):  # Ensure it's a dictionary-like object
-        weights = weights if isinstance(weights, dict) else dict(weights)  # Convert OrderedDict to dict
+def check_weights_nan(weights, when, debug):
+    if debug:
+        # Convert odict_values to a list
+        if isinstance(weights, (dict, OrderedDict)):  # Ensure it's a dictionary-like object
+            weights = weights if isinstance(weights, dict) else dict(weights)  # Convert OrderedDict to dict
 
-        for name, param in weights.items():
-            if torch.isnan(param).any() or torch.isinf(param).any():
-                print(f"⚠️ NaN or Inf found in {name} {when}!")
+            for name, param in weights.items():
+                if torch.isnan(param).any() or torch.isinf(param).any():
+                    print(f"⚠️ NaN or Inf found in {name} {when}!")
 
-    elif isinstance(weights, list):  # Handle list of tensors
-        for param in weights:
-            if torch.isnan(param).any() or torch.isinf(param).any():
+        elif isinstance(weights, list):  # Handle list of tensors
+            for param in weights:
+                if torch.isnan(param).any() or torch.isinf(param).any():
+                    print(f"⚠️ NaN or Inf found {when}!")
+
+        elif isinstance(weights, torch.Tensor):  # Handle single tensor case
+            if torch.isnan(weights).any() or torch.isinf(weights).any():
                 print(f"⚠️ NaN or Inf found {when}!")
 
-    elif isinstance(weights, torch.Tensor):  # Handle single tensor case
-        if torch.isnan(weights).any() or torch.isinf(weights).any():
-            print(f"⚠️ NaN or Inf found {when}!")
-
-    else:
-        print(f"⚠️ Unexpected type {type(weights)} in check_weights_nan {when}!")
+        else:
+            print(f"⚠️ Unexpected type {type(weights)} in check_weights_nan {when}!")

@@ -94,7 +94,7 @@ def main(args):
             state_dicts, n_samples = update_clients(clients, global_weights, args.smpc)
             print("Aggregating weights...")
             global_weights = aggregate(state_dicts, n_samples, args.smpc, list(global_weights.keys()))
-            check_weights_nan(global_weights, "after aggregation")
+            check_weights_nan(global_weights, "after aggregation", args.debug)
 
             if args.per_round_snapshots:
                 correction_snapshot(clients, global_weights, f"{args.output}/{translate(str(test_batches))}",
@@ -207,6 +207,7 @@ if __name__ == '__main__':
     parser.add_argument("--combine", action='store_true', default=False)
     parser.add_argument("--per_round_snapshots", action='store_true', default=False)
     parser.add_argument("--smpc", action='store_true', default=False)
+    parser.add_argument("--debug", action='store_true', default=False)
     parser.add_argument("--aggregation", type=str, default="fedavg", choices=["fedavg", "weighted_fedavg"])
     args = parser.parse_args()
 

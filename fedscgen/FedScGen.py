@@ -122,7 +122,7 @@ class FedScGen(ScGen):
         Remove the batch effect from the dataset
     """
 
-    def __init__(self, n_total_samples, aggregation="str", init_model_path=None, smpc=True, **kwargs):
+    def __init__(self, n_total_samples, aggregation="str", init_model_path=None, smpc=True, debug=False, **kwargs):
         super().__init__(init_model_path, **kwargs)
         self.unique_cell_types = np.unique(self.adata.obs[self.cell_key])
         self.adata_latent = None
@@ -131,6 +131,7 @@ class FedScGen(ScGen):
         self.sample_ration = self.n_samples / n_total_samples
         self.aggregation = aggregation
         self.smpc = smpc
+        self.debug = debug
 
 
     def local_update(self, global_weights):
@@ -145,7 +146,7 @@ class FedScGen(ScGen):
             The weights of the local model and the number of samples in the local dataset
         """
         self.round += 1
-        check_weights_nan(global_weights, "before training")
+        check_weights_nan(global_weights, "before training", self.debug)
         self.set_weights(global_weights)
         self.train(n_epochs=self.epoch, early_stopping_kwargs=self.stopping, lr=self.lr, batch_size=self.batch_size)
         return self.get_local_updates()
@@ -303,7 +304,7 @@ class FedScGen(ScGen):
             weights = self.get_weights().values()
             if self.aggregation == "weighted_fedavg":
                weights = [param * self.sample_ration for param in weights]
-            check_weights_nan(weights, "after training")
+            check_weights_nan(weights, "after training", self.debug)
             encrypted_weights = [crypten.cryptensor(param) for param in weights]
             return encrypted_weights
 
