@@ -1,15 +1,17 @@
 #!/bin/bash
 
-GPU_LIST="${1:-0,1,2}"  # Default: GPUs 0,1,2 if not provided
+GPU_LIST="${1:-0,1,2,3}"  # Default to GPUs 0,1,2,3 if not provided
 IFS=',' read -r -a GPUS <<< "$GPU_LIST"
 NUM_GPUS=${#GPUS[@]}
-GPU_INDEX=0
+GPU_INDEX=0  # Track current GPU index
 
 # Function to get the next available GPU
 get_next_gpu() {
-    local gpu=${GPUS[$GPU_INDEX]}
-    GPU_INDEX=$(( (GPU_INDEX + 1) % NUM_GPUS ))
-    echo "$gpu"
+    local gpu=${GPUS[$GPU_INDEX]}  # Select the current GPU
+    GPU_INDEX=$(( (GPU_INDEX + 1) % NUM_GPUS ))  # Cycle to the next GPU
+
+    echo "DEBUG: Selected GPU: $gpu (Index: $GPU_INDEX)" >&2  # Debug output
+    echo "$gpu"  # Return the selected GPU
 }
 
 # Function to wait only for this script’s processes
