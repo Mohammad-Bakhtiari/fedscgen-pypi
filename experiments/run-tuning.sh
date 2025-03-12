@@ -1,8 +1,9 @@
 #!/bin/bash
 
-NUM_GPUS="${1:-3}"
+AVAILABLE_GPUS="${1:-0,1,2,3}"
 
-GPU=0
+source ./gpu_manager.sh "$AVAILABLE_GPUS"
+
 chmod +x fedscgen.sh
 
 echo "hyperparameter tuning for including all cell types and batches"
@@ -21,12 +22,9 @@ for ds in "${DATASETS[@]}";do
   n_rounds=10
   epoch=1
   while true; do
+      GPU=$(get_next_gpu)
       ./fedscgen.sh "$ds.h5ad" "" false false "0" "$n_clients" "$batches" "$GPU" "$n_rounds" "$epoch" 50 true true &
-      GPU=$((GPU+1))
-      if [ $GPU -eq $NUM_GPUS ]; then
-          wait
-          GPU=0
-      fi
+      wait_for_free_gpu
       epoch=$((epoch+1))
       if [ $epoch -gt 10 ]; then
           break
