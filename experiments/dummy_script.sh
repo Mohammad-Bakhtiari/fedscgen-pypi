@@ -12,12 +12,13 @@ TASKS=("Task1" "Task2" "Task3" "Task4" "Task5" "Task6")
 for task in "${TASKS[@]}"; do
     echo -e "\e[31mRunning $task\e[0m"
 
-    GPU=$(get_next_gpu)  # Get an available GPU
+    # Call get_next_gpu and capture output without subshell issues
+    GPU=$(get_next_gpu)  # This works if we ensure GPU_INDEX persists
     echo "DEBUG: Running $task on GPU $GPU" >&2  # Debug message
 
     ./gpu_task.sh "$task" "$GPU" &  # Run task in background
 
-    wait_for_free_gpu  # Ensure we don't overload GPUs
+    wait_for_free_gpu  # Ensure we don’t overload GPUs
 done
 
 wait  # Ensure all tasks finish before exiting

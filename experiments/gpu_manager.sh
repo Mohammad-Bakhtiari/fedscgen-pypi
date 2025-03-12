@@ -3,17 +3,16 @@
 GPU_LIST="${1:-0,1,2,3}"  # Default GPUs
 IFS=',' read -r -a GPUS <<< "$GPU_LIST"  # Convert to array
 NUM_GPUS=${#GPUS[@]}  # Get the number of GPUs
-GPU_INDEX=0  # Track which GPU to use
+export GPU_INDEX=0  # Export GPU_INDEX so it persists in the parent shell
 
 # Function to get the next available GPU
 get_next_gpu() {
     echo "DEBUG: Current GPU_INDEX before update: $GPU_INDEX" >&2  # Debugging
 
-    gpu=${GPUS[$GPU_INDEX]}  # Select GPU (No local keyword!)
+    gpu=${GPUS[$GPU_INDEX]}  # Select GPU
 
     # Update GPU_INDEX globally
     GPU_INDEX=$(( (GPU_INDEX + 1) % NUM_GPUS ))
-
     echo "DEBUG: Next GPU_INDEX after update: $GPU_INDEX" >&2  # Debugging
     echo "$gpu"  # Return the selected GPU
 }
