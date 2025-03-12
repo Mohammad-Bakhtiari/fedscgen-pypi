@@ -146,20 +146,21 @@ def find_all_corrected_files_path(scgen_res_dir, fedscgen_res_dir):
         for file in files:
             if file.endswith("corrected.h5ad"):
                 file_path = os.path.join(root, file)
-                seed = file_path.split('seed_')[1].split('/')[0] if 'seed_' in file_path else -1
+                seed = int(file_path.split('seed_')[1].split('/')[0]) if 'seed_' in file_path else -1
                 scgen_corrected_files.append((file_path, seed))
     fedscgen_corrected_files = []
     for root, dirs, files in os.walk(fedscgen_res_dir):
         for file in files:
             if file.endswith("fed_corrected.h5ad"):
                 file_path = os.path.join(root, file)
-                seed = file_path.split('seed_')[1].split('/')[0] if 'seed_' in file_path else -1
+                seed = int(file_path.split('seed_')[1].split('/')[0]) if 'seed_' in file_path else -1
                 fedscgen_corrected_files.append((file_path, seed))
     return ('scGen', scgen_corrected_files), ('FedscGen', fedscgen_corrected_files)
 
 def benchmark_all_datasets(fed_data_dir: str, cent_data_dir: str, inclusion: str, n_components: int, batch_key: str,
                            cell_key: str):
     output_file = os.path.join(fed_data_dir, f"fed_cent_metrics-{inclusion}.csv")
+    results_df = pd.read_csv(output_file)
     for ds_name in DATASETS:
         if inclusion != "all" and ds_name in ["CellLine", "HumanDendriticCells"]:
             continue
@@ -169,10 +170,8 @@ def benchmark_all_datasets(fed_data_dir: str, cent_data_dir: str, inclusion: str
             for file_path, seed in files:
                 if '/BO1' in file_path:
                     continue
-                if os.path.exists(output_file):
-                    df = pd.read_csv(output_file)
-                    if len(df[(df["Approach"] == approach) & (df["Dataset"] == ds_name) & (df["Seed"] == seed)]) > 0:
-                        continue
+                if len(results_df[(results_df["Approach"] == approach) & (results_df["Dataset"] == ds_name) & (results_df["Seed"] == seed)]) > 0:
+                    continue
                 try:
                     metric = benchmark_dataset(approach, file_path, seed, n_components, batch_key, cell_key, ds_name)
                     df = pd.DataFrame([metric])
