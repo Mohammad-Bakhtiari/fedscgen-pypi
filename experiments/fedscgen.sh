@@ -74,7 +74,7 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
         --gpu "$GPU" \
         --n_rounds $ROUND   \
         --aggregation "fedavg" \
-        --spmc \
+        --smpc \
         $combine_flag \
         "$snapshot_flag"
     if [ "$SNAPSHOT" = "true" ]; then
