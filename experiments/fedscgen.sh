@@ -55,42 +55,43 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
     mkdir -p "${output}"
     echo "Running $batch_out batch out for $n_clients clients"
     export CUBLAS_WORKSPACE_CONFIG=:4096:8
-    python3 "${root_dir}/scripts/fedscgen_.py" \
-        --init_model_path "${root_dir}/models/${DATASET}" \
-        --adata "$raw" \
-        --output  "$output"\
-        --epoch $EPOCH \
-        --cell_key "cell_type" \
-        --batch_key "batch" \
-        --batches "$BATCHES" \
-        --lr 0.001 \
-        --batch_size "$BATCH_SIZE" \
-        --hidden_size "800,800" \
-        --z_dim 10 \
-        --early_stopping_kwargs '{"early_stopping_metric": "val_loss", "patience": 20, "threshold": 0, "reduce_lr": True, "lr_patience": 13, "lr_factor": 0.1}' \
-        --batch_out "$batch_out" \
-        --n_clients "$n_clients" \
-        --remove_cell_types "$REMOVE_CELL_TYPES" \
-        --gpu "$GPU" \
-        --n_rounds $ROUND   \
-        --aggregation "fedavg" \
-        --smpc \
-        $combine_flag \
-        "$snapshot_flag"
-    if [ "$SNAPSHOT" = "true" ]; then
-        for corrected in "$output"/*.h5ad; do
-          echo -e "\e[33mPCA on $corrected\e[0m \n "
-          python "${root_dir}/scripts/pca_reduction_simple.py" --path "$corrected" \
-            --n_components 20 \
-            --output_dir "$corrected"
-        done
-    else
-      while IFS= read -r -d '' corrected
-      do
-        echo -e "\e[33mPCA on $corrected\e[0m \n "
-        python "${root_dir}/scripts/pca_reduction_simple.py" --path "$corrected" \
-          --n_components 20 \
-          --output_dir "$corrected"
-      done < <(find "$output" -name '*.h5ad' -print0)
-    fi
+    sleep $((RANDOM % 5 + 2))
+#    python3 "${root_dir}/scripts/fedscgen_.py" \
+#        --init_model_path "${root_dir}/models/${DATASET}" \
+#        --adata "$raw" \
+#        --output  "$output"\
+#        --epoch $EPOCH \
+#        --cell_key "cell_type" \
+#        --batch_key "batch" \
+#        --batches "$BATCHES" \
+#        --lr 0.001 \
+#        --batch_size "$BATCH_SIZE" \
+#        --hidden_size "800,800" \
+#        --z_dim 10 \
+#        --early_stopping_kwargs '{"early_stopping_metric": "val_loss", "patience": 20, "threshold": 0, "reduce_lr": True, "lr_patience": 13, "lr_factor": 0.1}' \
+#        --batch_out "$batch_out" \
+#        --n_clients "$n_clients" \
+#        --remove_cell_types "$REMOVE_CELL_TYPES" \
+#        --gpu "$GPU" \
+#        --n_rounds $ROUND   \
+#        --aggregation "fedavg" \
+#        --smpc \
+#        $combine_flag \
+#        "$snapshot_flag"
+#    if [ "$SNAPSHOT" = "true" ]; then
+#        for corrected in "$output"/*.h5ad; do
+#          echo -e "\e[33mPCA on $corrected\e[0m \n "
+#          python "${root_dir}/scripts/pca_reduction_simple.py" --path "$corrected" \
+#            --n_components 20 \
+#            --output_dir "$corrected"
+#        done
+#    else
+#      while IFS= read -r -d '' corrected
+#      do
+#        echo -e "\e[33mPCA on $corrected\e[0m \n "
+#        python "${root_dir}/scripts/pca_reduction_simple.py" --path "$corrected" \
+#          --n_components 20 \
+#          --output_dir "$corrected"
+#      done < <(find "$output" -name '*.h5ad' -print0)
+#    fi
 done
