@@ -21,7 +21,7 @@ do
     combined=$([ "$inclusion" == "combined" ] && echo true || echo false)
     dropped=$([ "$inclusion" == "dropped" ] && echo true || echo false)
     task_name="${DATASETS[$index]}-${inclusion}"
-    TASK_QUEUE+=("$task_name ${DATASETS[$index]}.h5ad ${DROPPED_CELLTYPES[$index]} $combined $dropped _GPU_")
+    TASK_QUEUE+=("$task_name ${DATASETS[$index]}.h5ad ${DROPPED_CELLTYPES[$index]:-''} $combined $dropped _GPU_")
   done
 done
 wait
