@@ -20,7 +20,8 @@ for ds in "${DATASETS[@]}";do
   n_rounds=10
   for epoch in {1..10}; do
         task_name="${ds}-E${epoch}"
-        TASK_QUEUE+=("$task_name $ds.h5ad '' false false 0 $n_clients $batches _GPU_ $n_rounds $epoch 50 true true")
+        task="$task_name|$ds.h5ad|''|false|false|0|$n_clients|$batches|_GPU_|$n_rounds|$epoch|50|true|true"
+        TASK_QUEUE+=("$task")
   done
 done
 script_name="fedscgen.sh"
