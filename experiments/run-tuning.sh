@@ -2,10 +2,7 @@
 
 AVAILABLE_GPUS="${1:-0,1,2,3}"
 
-source ./gpu_manager.sh "$AVAILABLE_GPUS"
-
-chmod +x fedscgen.sh
-
+declare -a TASK_QUEUE
 echo "hyperparameter tuning for including all cell types and batches"
 DATASETS=(HumanDendriticCells MouseCellAtlas HumanPancreas PBMC CellLine MouseRetina MouseHematopoieticStemProgenitorCells)
 for ds in "${DATASETS[@]}";do
@@ -20,14 +17,11 @@ for ds in "${DATASETS[@]}";do
     n_clients=3
   fi
   n_rounds=10
-  epoch=1
-  while true; do
-      get_next_gpu
-      ./fedscgen.sh "$ds.h5ad" "" false false "0" "$n_clients" "$batches" "$FEDSCGEN_NEXT_GPU" "$n_rounds" "$epoch" 50 true true &
-      wait_for_free_gpu
-      epoch=$((epoch+1))
-      if [ $epoch -gt 10 ]; then
-          break
-      fi
+  for epoch in {1..10}; do
+        task_name="${ds}-E${epoch}"
+        TASK_QUEUE+=("$task_name $ds.h5ad '' false false 0 $n_clients $batches _GPU_ $n_rounds $epoch 50 true true")
   done
 done
+chmod +x gpumaestro.sh
+chmod +x fedscgen.sh
+./gpumaestro.sh "$AVAILABLE_GPUS" "./fedscgen.sh" "${TASK_QUEUE[@]}"
