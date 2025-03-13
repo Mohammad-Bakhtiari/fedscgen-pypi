@@ -1,6 +1,7 @@
 #!/bin/bash
 
 AVAILABLE_GPUS="${1:-0,1,2,3}"
+SMPC="${2:-"--smpc"}"
 
 declare -a TASK_QUEUE
 echo "hyperparameter tuning for including all cell types and batches"
@@ -22,6 +23,8 @@ for ds in "${DATASETS[@]}";do
         TASK_QUEUE+=("$task_name $ds.h5ad '' false false 0 $n_clients $batches _GPU_ $n_rounds $epoch 50 true true")
   done
 done
+script_name="fedscgen.sh"
+[ "$SMPC" == "--smpc" ] && script_name="fedscgen-smpc.sh"
 chmod +x gpumaestro.sh
-chmod +x fedscgen.sh
-./gpumaestro.sh "$AVAILABLE_GPUS" "./fedscgen.sh" "${TASK_QUEUE[@]}"
+chmod +x $script_name
+./gpumaestro.sh "$AVAILABLE_GPUS" "./${script_name}" "${TASK_QUEUE[@]}"
