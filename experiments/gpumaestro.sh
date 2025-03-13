@@ -42,12 +42,14 @@ while [ "$RUNNING_TASKS" -lt "$NUM_GPUS" ] && [ ${#TASK_QUEUE[@]} -gt 0 ]; do
     task_name="${task_args[0]}"
     args=("${task_args[@]:1}")
 
-    # Replace _GPU_ placeholder inside args array
+    # Assign the next GPU *before* replacing the placeholder
+    get_next_gpu
+
+    # Replace _GPU_ placeholder inside args array with the current GPU
     for i in "${!args[@]}"; do
         args[$i]="${args[$i]//_GPU_/$FEDSCGEN_NEXT_GPU}"
     done
 
-    get_next_gpu
     echo -e "\e[32m[GPUmaestro]: Running $SCRIPT_TO_RUN on task: $task_name on GPU:$FEDSCGEN_NEXT_GPU\e[0m" >&2
     "$SCRIPT_TO_RUN" "${args[@]}" &
 done
@@ -65,15 +67,15 @@ while [ ${#TASK_QUEUE[@]} -gt 0 ]; do
     task_name="${task_args[0]}"
     args=("${task_args[@]:1}")
 
-    # Replace _GPU_ placeholder inside args array
+    # Assign the next GPU *before* replacing the placeholder
+    get_next_gpu
+
+    # Replace _GPU_ placeholder inside args array with the current GPU
     for i in "${!args[@]}"; do
         args[$i]="${args[$i]//_GPU_/$FEDSCGEN_NEXT_GPU}"
     done
 
-    get_next_gpu
     echo -e "\e[32m[GPUmaestro]: Running $SCRIPT_TO_RUN on task: $task_name on GPU:$FEDSCGEN_NEXT_GPU\e[0m" >&2
-    # Debugging: Print the arguments being passed
-    echo "Args: ${args[*]}" >&2
     "$SCRIPT_TO_RUN" "${args[@]}" &
 done
 
