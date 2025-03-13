@@ -5,7 +5,7 @@ AVAILABLE_GPUS="${1:-0,1,2,3}"
 declare -a TASK_QUEUE
 
 DATASETS=(MouseCellAtlas HumanPancreas PBMC MouseRetina MouseBrain MouseHematopoieticStemProgenitorCells)
-DROPPED_CELLTYPES=(""
+DROPPED_CELLTYPES=("Epithelial,Dendritic,Smooth-muscle,NK"
   "stellate,endothelial,mesenchymal,macrophage,mast,epsilon,schwann,t_cell,MHC class II"
    "Plasmacytoid dendritic cell,Megakaryocyte,Hematopoietic stem cell"
    "ganglion,vascular_endothelium,horizontal,fibroblasts,microglia,pericytes,astrocytes"
@@ -19,7 +19,7 @@ do
     combined=$([ "$inclusion" == "combined" ] && echo true || echo false)
     dropped=$([ "$inclusion" == "dropped" ] && echo true || echo false)
     task_name="${DATASETS[$index]}-${inclusion}"
-    task="$task_name|${DATASETS[$index]}.h5ad|${DROPPED_CELLTYPES[$index]:-}|$combined|$dropped|_GPU_"
+    task="$task_name|${DATASETS[$index]}.h5ad|${DROPPED_CELLTYPES[$index]:-''}|$combined|$dropped|_GPU_"
     TASK_QUEUE+=("$task")
 
 
