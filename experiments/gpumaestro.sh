@@ -49,8 +49,6 @@ while [ "$RUNNING_TASKS" -lt "$NUM_GPUS" ] && [ ${#TASK_QUEUE[@]} -gt 0 ]; do
 
     get_next_gpu
     echo -e "\e[32m[GPUmaestro]: Running $SCRIPT_TO_RUN on task: $task_name on GPU:$FEDSCGEN_NEXT_GPU\e[0m" >&2
-    # Debugging: Print the arguments being passed
-    echo "Args: ${args[*]}" >&2
     "$SCRIPT_TO_RUN" "${args[@]}" &
 done
 
