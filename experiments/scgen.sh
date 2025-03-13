@@ -32,23 +32,23 @@ fi
 
 mkdir -p "${output_path}"
 export CUBLAS_WORKSPACE_CONFIG=:4096:8
-python "${root_dir}/scripts/scgen.py" \
---model_path "${root_dir}/models/${DATASET}" \
---data_path "$raw" \
---output_path "$output_path" \
---epoch 100 \
---batch_key "batch" \
---cell_key "cell_type" \
---z_dim 10 \
---hidden_layers_sizes "800,800" \
---batch_size 50 \
---remove_cell_types "$REMOVE_CELL_TYPES" \
---early_stopping_kwargs "{'early_stopping_metric': 'val_loss', 'patience': 20, 'threshold': 0, 'reduce_lr': True, 'lr_patience': 13, 'lr_factor': 0.1}" \
---gpu "$GPU" \
-$combine_flag
-
-corrected_file="${output_path}/corrected.h5ad"
-# Running PCA reduction on results
-python "${root_dir}/scripts/pca_reduction_simple.py" --path "$corrected_file" \
-  --n_components 20 \
-  --output_dir "$corrected_file"
+#python "${root_dir}/scripts/scgen.py" \
+#--model_path "${root_dir}/models/${DATASET}" \
+#--data_path "$raw" \
+#--output_path "$output_path" \
+#--epoch 100 \
+#--batch_key "batch" \
+#--cell_key "cell_type" \
+#--z_dim 10 \
+#--hidden_layers_sizes "800,800" \
+#--batch_size 50 \
+#--remove_cell_types "$REMOVE_CELL_TYPES" \
+#--early_stopping_kwargs "{'early_stopping_metric': 'val_loss', 'patience': 20, 'threshold': 0, 'reduce_lr': True, 'lr_patience': 13, 'lr_factor': 0.1}" \
+#--gpu "$GPU" \
+#$combine_flag
+#
+#corrected_file="${output_path}/corrected.h5ad"
+## Running PCA reduction on results
+#python "${root_dir}/scripts/pca_reduction_simple.py" --path "$corrected_file" \
+#  --n_components 20 \
+#  --output_dir "$corrected_file"
