@@ -41,9 +41,9 @@ fi
 
 root_dir="$(dirname "$PWD")"
 raw="${root_dir}/data/datasets/${H5AD_FILE}"
-output_path="${root_dir}/results/scgen/federated/${DATASET}/${INCLUSION}"
+output_path="${root_dir}/results/fedscgen/${DATASET}/${INCLUSION}"
 if [ "$TUNING" = "true" ]; then
-  output="${root_dir}/results/scgen/federated/param-tuning/${DATASET}/E${EPOCH}"
+  output="${root_dir}/results/fedscgen/param-tuning/${DATASET}/E${EPOCH}"
 fi
 
 for i in "${!BATCH_OUT_VALUES[@]}"; do
@@ -73,8 +73,7 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
         --remove_cell_types "$REMOVE_CELL_TYPES" \
         --gpu "$GPU" \
         --n_rounds $ROUND   \
-        --aggregation "fedavg" \
-        --smpc \
+        --aggregation "weighted_fedavg" \
         $combine_flag \
         "$snapshot_flag"
     if [ "$SNAPSHOT" = "true" ]; then
