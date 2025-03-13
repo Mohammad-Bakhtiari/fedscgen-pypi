@@ -23,7 +23,7 @@ fi
 
 root_dir="$(dirname "$PWD")"
 raw="${root_dir}/data/datasets/${H5AD_FILE}"
-output_path="${root_dir}/results/scgen/centralized/${DATASET}/${INCLUSION}"
+output_path="${root_dir}/results/scgen/${DATASET}/${INCLUSION}"
 
 combine_flag=""
 if [ "$COMBINE" = "true" ]; then
