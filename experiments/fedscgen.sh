@@ -20,9 +20,7 @@ TUNING="${13:-false}"
 # DATASET is H5AD_FILE without the extension
 DATASET=$(echo "$H5AD_FILE" | cut -f 1 -d '.')
 
-
-
-echo "Running arguments: h5ad file: $H5AD_FILE, remove cell types: $REMOVE_CELL_TYPES, combine: $COMBINE, drop: $DROP, batch out values: ${BATCH_OUT_VALUES[@]}, n clients: ${N_CLIENTS_VALUES[@]}, batches: $BATCHES, gpu: $GPU, rounds: $ROUND, epoch: $EPOCH, snapshot: $SNAPSHOT, tuning: $TUNING"
+echo "Args: h5ad file: $H5AD_FILE, remove cell types: $REMOVE_CELL_TYPES, combine: $COMBINE, drop: $DROP, batch out values: ${BATCH_OUT_VALUES[@]}, n clients: ${N_CLIENTS_VALUES[@]}, batches: $BATCHES, gpu: $GPU"
 
 # Setting up other variables based on the flags
 combine_flag=""
