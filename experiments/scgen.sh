@@ -6,6 +6,7 @@ REMOVE_CELL_TYPES="$2"
 COMBINE="$3"
 DROP="$4"
 GPU="${5:-0}"
+SEED="${6:-1}"
 
 echo "Args: h5ad file: $H5AD_FILE, remove cell types: $REMOVE_CELL_TYPES, combine: $COMBINE, drop: $DROP, gpu: $GPU"
 
@@ -24,6 +25,10 @@ fi
 root_dir="$(dirname "$PWD")"
 raw="${root_dir}/data/datasets/${H5AD_FILE}"
 output_path="${root_dir}/results/scgen/${DATASET}/${INCLUSION}"
+
+if [ "${SEED}" -ne "1" ]; then
+  output_path="${output_path}/seed_${SEED}"
+fi
 
 combine_flag=""
 if [ "$COMBINE" = "true" ]; then
