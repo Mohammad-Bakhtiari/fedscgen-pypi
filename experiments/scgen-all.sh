@@ -20,7 +20,7 @@ do
 
     # Define paths and parameters
     raw="${root_dir}/data/datasets/${dataset}.h5ad"
-    output_path="${root_dir}/results/scgen/centralized/${dataset}/${INCLUSION}/seed_${seed}"  # Include seed in output path
+    output_path="${root_dir}/results/scgen/${dataset}/${INCLUSION}/seed_${seed}"  # Include seed in output path
 
     mkdir -p "${output_path}"
     export CUBLAS_WORKSPACE_CONFIG=:4096:8
@@ -49,7 +49,7 @@ do
 
   for dataset in "${DATASETS[@]}"
   do
-    corrected_file="${root_dir}/results/scgen/centralized/${dataset}/${INCLUSION}/seed_${seed}/corrected.h5ad"
+    corrected_file="${root_dir}/results/scgen/${dataset}/${INCLUSION}/seed_${seed}/corrected.h5ad"
     echo -e "\e[32mRunning PCA reduction for $dataset with seed $seed\e[0m"
     python "${root_dir}/scripts/pca_reduction_simple.py" --path "$corrected_file" \
       --n_components 20 \
