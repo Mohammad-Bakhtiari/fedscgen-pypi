@@ -36,19 +36,26 @@ while [ "$RUNNING_TASKS" -lt "$NUM_GPUS" ] && [ ${#TASK_QUEUE[@]} -gt 0 ]; do
     task=${TASK_QUEUE[0]}
     unset 'TASK_QUEUE[0]'
     TASK_QUEUE=("${TASK_QUEUE[@]}")  # Shift array
+    task_name="${task[0]}"
+    args=("${task[@]:1}")
 
-    # Extract task name (first field) and args (rest of the string)
-    IFS=' ' read -r task_name args <<< "$task"
-
-    # Replace _GPU_ placeholder with FEDSCGEN_NEXT_GPU in args
-    args_with_gpu="${args//_GPU_/$FEDSCGEN_NEXT_GPU}"
+    # Replace _GPU_ placeholder inside args array
+    for i in "${!args[@]}"; do
+        args[$i]="${args[$i]//_GPU_/$FEDSCGEN_NEXT_GPU}"
+    done
+#    # Extract task name (first field) and args (rest of the string)
+#    IFS=' ' read -r task_name args <<< "$task"
+#
+#    # Replace _GPU_ placeholder with FEDSCGEN_NEXT_GPU in args
+#    args_with_gpu="${args//_GPU_/$FEDSCGEN_NEXT_GPU}"
 
     get_next_gpu
     echo -e "\e[32m[GPUmaestro]: Running $SCRIPT_TO_RUN on task: $task_name on GPU:$FEDSCGEN_NEXT_GPU\e[0m" >&2
 
-    # Convert args string to array and execute (excluding task_name)
-    IFS=' ' read -r -a arg_array <<< "$args_with_gpu"
-    "$SCRIPT_TO_RUN" "${arg_array[@]}" &
+#    # Convert args string to array and execute (excluding task_name)
+#    IFS=' ' read -r -a arg_array <<< "$args_with_gpu"
+#    "$SCRIPT_TO_RUN" "${arg_array[@]}" &
+    "$SCRIPT_TO_RUN" "${args[@]}" &
 done
 
 # Keep NUM_GPUS tasks running by replacing finished ones
@@ -58,19 +65,25 @@ while [ ${#TASK_QUEUE[@]} -gt 0 ]; do
     task=${TASK_QUEUE[0]}
     unset 'TASK_QUEUE[0]'
     TASK_QUEUE=("${TASK_QUEUE[@]}")  # Shift array
-
-    # Extract task name (first field) and args (rest of the string)
-    IFS=' ' read -r task_name args <<< "$task"
-
-    # Replace _GPU_ placeholder with FEDSCGEN_NEXT_GPU in args
-    args_with_gpu="${args//_GPU_/$FEDSCGEN_NEXT_GPU}"
+    task_name="${task[0]}"
+    args=("${task[@]:1}")
+    # Replace _GPU_ placeholder inside args array
+    for i in "${!args[@]}"; do
+        args[$i]="${args[$i]//_GPU_/$FEDSCGEN_NEXT_GPU}"
+    done
+#    # Extract task name (first field) and args (rest of the string)
+#    IFS=' ' read -r task_name args <<< "$task"
+#
+#    # Replace _GPU_ placeholder with FEDSCGEN_NEXT_GPU in args
+#    args_with_gpu="${args//_GPU_/$FEDSCGEN_NEXT_GPU}"
 
     get_next_gpu
     echo -e "\e[32m[GPUmaestro]: Running $SCRIPT_TO_RUN on task: $task_name on GPU:$FEDSCGEN_NEXT_GPU\e[0m" >&2
 
-    # Convert args string to array and execute (excluding task_name)
-    IFS=' ' read -r -a arg_array <<< "$args_with_gpu"
-    "$SCRIPT_TO_RUN" "${arg_array[@]}" &
+#    # Convert args string to array and execute (excluding task_name)
+#    IFS=' ' read -r -a arg_array <<< "$args_with_gpu"
+#    "$SCRIPT_TO_RUN" "${arg_array[@]}" &
+    "$SCRIPT_TO_RUN" "${args[@]}" &
 done
 
 # Wait for all remaining tasks to complete
