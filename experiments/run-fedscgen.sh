@@ -1,11 +1,10 @@
 #!/bin/bash
-NUM_GPUS="${2:-3}"
+AVAILABLE_GPUS="${1:-0,1,2,3}"
+SMPC="${2:-"--smpc"}"
 
-chmod +x fedscgen.sh
+declare -a TASK_QUEUE
 
-GPU=0
 DATASETS=(MouseCellAtlas HumanPancreas PBMC MouseRetina MouseBrain MouseHematopoieticStemProgenitorCells)
-
 DROPPED_CELLTYPES=( ""
  "Epithelial,Dendritic,Smooth-muscle,NK"
   "stellate,endothelial,mesenchymal,macrophage,mast,epsilon,schwann,t_cell,MHC class II"
@@ -25,14 +24,13 @@ do
     n_clients=$([ "${DATASETS[$index]}" == "HumanPancreas" ] && echo "5 4" || echo "2")
     batches=$([ "${DATASETS[$index]}" == "HumanPancreas" ] && echo "0,1,2,3,4" || echo "0,1")
     batch_out=$([ "${DATASETS[$index]}" == "HumanPancreas" ] && echo "0 1" || echo "0")
-
-    echo -e "\e[31mRunning fedscgen for ${DATASETS[$index]} with $inclusion with combined=$combined and dropped=$dropped and dropped_celltypes=${DROPPED_CELLTYPES[$index]} and n_clients=$n_clients and batches=$batches on GPU $GPU\e[0m"
-    ./fedscgen.sh "${DATASETS[$index]}.h5ad" "${DROPPED_CELLTYPES[$index]}" $combined $dropped "$batch_out" "$n_clients" "$batches" "$GPU"&
-    GPU=$((GPU+1))
-    if [ $GPU -eq $NUM_GPUS ]; then
-      wait
-      GPU=0
-    fi
+    task_name="${DATASETS[$index]}-${inclusion}"
+    TASK_QUEUE+=("$task_name ${DATASETS[$index]}.h5ad ${DROPPED_CELLTYPES[$index]} $combined $dropped $batch_out $n_clients $batches _GPU_")
   done
 done
-wait
+
+script_name="fedscgen.sh"
+[ "$SMPC" == "--smpc" ] && script_name="fedscgen-smpc.sh"
+chmod +x gpumaestro.sh
+chmod +x $script_name
+./gpumaestro.sh "$AVAILABLE_GPUS" "./${script_name}" "${TASK_QUEUE[@]}"
