@@ -1,11 +1,8 @@
 #!/bin/bash
 
-NUM_GPUS="${1:-3}"
-GPU=0
+AVAILABLE_GPUS="${1:-0,1,2,3}"
 
-# Making the scgen.sh executable
-chmod +x scgen.sh
-
+declare -a TASK_QUEUE
 
 DATASETS=(MouseCellAtlas HumanPancreas PBMC MouseRetina MouseBrain MouseHematopoieticStemProgenitorCells)
 DROPPED_CELLTYPES=( ""
@@ -23,14 +20,12 @@ do
   do
     combined=$([ "$inclusion" == "combined" ] && echo true || echo false)
     dropped=$([ "$inclusion" == "dropped" ] && echo true || echo false)
-    echo -e "\e[31mRunning scgen for ${DATASETS[$index]} with $inclusion with combined=$combined and dropped=$dropped and dropped_celltypes=${DROPPED_CELLTYPES[$index]}\e[0m"
-    ./scgen.sh "${DATASETS[$index]}.h5ad" "${DROPPED_CELLTYPES[$index]}" "$combined" "$dropped" $GPU &
-    GPU=$((GPU+1))
-    if [ $GPU -eq $NUM_GPUS ]; then
-      wait
-      GPU=0
-    fi
-
+    task_name="${DATASETS[$index]}-${inclusion}"
+    TASK_QUEUE+=("$task_name ${DATASETS[$index]}.h5ad ${DROPPED_CELLTYPES[$index]} $combined $dropped _GPU_")
   done
 done
 wait
+
+chmod +x gpumaestro.sh
+chmod +x scgen.sh
+./gpumaestro.sh "$AVAILABLE_GPUS" "./scgen.sh" "${TASK_QUEUE[@]}"
