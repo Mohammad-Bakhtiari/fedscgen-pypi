@@ -1,24 +1,18 @@
 #!/bin/bash
 
 AVAILABLE_GPUS="${1:-0,1,2,3}"
-source ./gpu_manager.sh "$AVAILABLE_GPUS"
+chmod +x gpumaestro.sh
+chmod +x gpu_task.sh
 
-chmod +x gpu_task.sh  # Ensure the GPU task script is executable
-
-echo "Starting dummy workload using available GPUs: $AVAILABLE_GPUS"
-
+# Build the task queue
+declare -a TASK_QUEUE
 TASKS=("Task1" "Task2" "Task3" "Task4" "Task5" "Task6")
 
 for task in "${TASKS[@]}"; do
-    echo -e "\e[31mRunning $task\e[0m"
-
-    get_next_gpu  # Call function to update NEXT_GPU
-    echo "DEBUG: Running $task on GPU $NEXT_GPU" >&2  # Debug message
-
-    ./gpu_task.sh "$task" "$NEXT_GPU" &  # Run task in background
-
-    wait_for_free_gpu  # Ensure we don't overload GPUs
+    TASK_QUEUE+=("$task _GPU_")  # Simple tasks with just a name
 done
 
-wait  # Ensure all tasks finish before exiting
-echo "All tasks completed!"
+echo "Starting dummy workload using available GPUs: $AVAILABLE_GPUS"
+
+# Pass GPU list, script name, and task queue to gpumaestro.sh
+./gpumaestro.sh "$AVAILABLE_GPUS" "./gpu_task.sh" "${TASK_QUEUE[@]}"
