@@ -1,6 +1,6 @@
 #!/bin/bash
 AVAILABLE_GPUS="${1:-0,1,2,3}"
-SMPC="${2:-"--smpc"}"
+SMPC="${2:-"true"}"
 
 declare -a TASK_QUEUE
 
@@ -25,12 +25,13 @@ do
     batches=$([ "${DATASETS[$index]}" == "HumanPancreas" ] && echo "0,1,2,3,4" || echo "0,1")
     batch_out=$([ "${DATASETS[$index]}" == "HumanPancreas" ] && echo "0 1" || echo "0")
     task_name="${DATASETS[$index]}-${inclusion}"
-    TASK_QUEUE+=("$task_name ${DATASETS[$index]}.h5ad ${DROPPED_CELLTYPES[$index]} $combined $dropped $batch_out $n_clients $batches _GPU_")
+    task="$task_name|${DATASETS[$index]}.h5ad|${DROPPED_CELLTYPES[$index]:-''}|$combined|$dropped|$batch_out|$n_clients|$batches|_GPU_"
+    TASK_QUEUE+=("$task")
   done
 done
 
 script_name="fedscgen.sh"
-[ "$SMPC" == "--smpc" ] && script_name="fedscgen-smpc.sh"
+[ "$SMPC" == "true" ] && script_name="fedscgen-smpc.sh"
 chmod +x gpumaestro.sh
 chmod +x $script_name
 ./gpumaestro.sh "$AVAILABLE_GPUS" "./${script_name}" "${TASK_QUEUE[@]}"
