@@ -15,7 +15,6 @@ do
     TASK_QUEUE+=("$task")
   done
 done
-wait
 
 chmod +x gpumaestro.sh
 chmod +x scgen.sh

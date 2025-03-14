@@ -21,11 +21,8 @@ do
     task_name="${DATASETS[$index]}-${inclusion}"
     task="$task_name|${DATASETS[$index]}.h5ad|${DROPPED_CELLTYPES[$index]:-''}|$combined|$dropped|_GPU_"
     TASK_QUEUE+=("$task")
-
-
   done
 done
-wait
 
 chmod +x gpumaestro.sh
 chmod +x scgen.sh
