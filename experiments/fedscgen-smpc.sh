@@ -48,7 +48,7 @@ python3 "${root_dir}/scripts/fedscgen_.py" \
         --n_rounds $ROUND   \
         --aggregation "fedavg" \
         --seed "$SEED" \
-        --smpc &
+        --smpc
 
 while IFS= read -r -d '' corrected
 do
