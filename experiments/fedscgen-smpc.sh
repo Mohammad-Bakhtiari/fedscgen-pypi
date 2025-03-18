@@ -21,7 +21,7 @@ echo "Args: h5ad file: $H5AD_FILE, n clients: ${N_CLIENTS}, batches: $BATCHES, g
 root_dir="$(dirname "$PWD")"
 raw="${root_dir}/data/datasets/${H5AD_FILE}"
 init_model_path="${root_dir}/models/${DATASET}"
-output_path="${root_dir}/results/fedscgen-smpc/${DATASET}"
+output="${root_dir}/results/fedscgen-smpc/${DATASET}"
 if [ "${SEED}" -ne "42" ]; then
   output="${output}/seed_${SEED}"
   init_model_path="${root_dir}/models/${DATASET}_${SEED}"
@@ -32,7 +32,7 @@ export CUBLAS_WORKSPACE_CONFIG=:4096:8
 python3 "${root_dir}/scripts/fedscgen_.py" \
         --init_model_path "$init_model_path" \
         --adata "$raw" \
-        --output  "$output_path" \
+        --output  "$output" \
         --epoch $EPOCH \
         --cell_key "cell_type" \
         --batch_key "batch" \
