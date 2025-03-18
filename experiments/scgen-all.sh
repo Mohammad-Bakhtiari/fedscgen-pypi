@@ -9,7 +9,7 @@ for seed in "${SEEDS[@]}"
 do
   for dataset in "${DATASETS[@]}"
   do
-    if [ "$dataset" == "MouseBrain" ] && [ "$seed" -eq 42 ]; then
+    if [ "$dataset" == "MouseBrain" ] && [ "$seed" -ne 42 ]; then
       continue
     fi
     task_name="${dataset}-${seed}"
