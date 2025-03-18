@@ -23,7 +23,9 @@ do
     task_name="${dataset}-Seed[${seed}]"
     task="$task_name|${dataset}.h5ad|$n_clients|$batches|_GPU_|$seed"
     TASK_QUEUE+=("$task")
+    break
   done
+  break
 done
 chmod +x gpumaestro.sh
 chmod +x fedscgen-smpc.sh
