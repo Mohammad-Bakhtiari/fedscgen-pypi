@@ -12,9 +12,8 @@ BATCHES=$7
 GPU="${8:-1}"
 ROUND="${9:-8}"
 EPOCH="${10:-2}"
-BATCH_SIZE="${11:-50}"
-SNAPSHOT="${12:-flase}"
-TUNING="${13:-false}"
+SNAPSHOT="${11:-flase}"
+TUNING="${12:-false}"
 
 
 # DATASET is H5AD_FILE without the extension
@@ -57,12 +56,12 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
         --init_model_path "${root_dir}/models/${DATASET}" \
         --adata "$raw" \
         --output  "$output"\
-        --epoch $EPOCH \
+        --epoch "$EPOCH" \
         --cell_key "cell_type" \
         --batch_key "batch" \
         --batches "$BATCHES" \
         --lr 0.001 \
-        --batch_size "$BATCH_SIZE" \
+        --batch_size 50 \
         --hidden_size "800,800" \
         --z_dim 10 \
         --early_stopping_kwargs '{"early_stopping_metric": "val_loss", "patience": 20, "threshold": 0, "reduce_lr": True, "lr_patience": 13, "lr_factor": 0.1}' \
@@ -70,7 +69,7 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
         --n_clients "$n_clients" \
         --remove_cell_types "$REMOVE_CELL_TYPES" \
         --gpu "$GPU" \
-        --n_rounds $ROUND   \
+        --n_rounds "$ROUND"   \
         --aggregation "weighted_fedavg" \
         $combine_flag \
         "$snapshot_flag"
