@@ -50,6 +50,7 @@ python "${root_dir}/scripts/scgen.py" \
 --batch_size 50 \
 --remove_cell_types "$REMOVE_CELL_TYPES" \
 --early_stopping_kwargs "{'early_stopping_metric': 'val_loss', 'patience': 20, 'threshold': 0, 'reduce_lr': True, 'lr_patience': 13, 'lr_factor': 0.1}" \
+--seed "$SEED" \
 --gpu "$GPU" \
 $combine_flag
 

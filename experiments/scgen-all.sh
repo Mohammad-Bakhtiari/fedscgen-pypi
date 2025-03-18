@@ -7,7 +7,6 @@ declare -a TASK_QUEUE
 DATASETS=(HumanDendriticCells MouseCellAtlas HumanPancreas PBMC CellLine MouseRetina MouseBrain MouseHematopoieticStemProgenitorCells)
 for seed in "${SEEDS[@]}"
 do
-  export FedscGen_RANDOM_SEED=$seed  # Set environment variable for seed
   for dataset in "${DATASETS[@]}"
   do
     task_name="${DATASETS[$index]}-${seed}"
