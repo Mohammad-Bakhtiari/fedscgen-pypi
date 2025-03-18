@@ -6,7 +6,7 @@ REMOVE_CELL_TYPES="$2"
 COMBINE="$3"
 DROP="$4"
 GPU="${5:-0}"
-SEED="${6:-1}"
+SEED="${6:-42}"
 
 echo "Args: h5ad file: $H5AD_FILE, remove cell types: $REMOVE_CELL_TYPES, combine: $COMBINE, drop: $DROP, gpu: $GPU"
 
@@ -25,9 +25,10 @@ fi
 root_dir="$(dirname "$PWD")"
 raw="${root_dir}/data/datasets/${H5AD_FILE}"
 output_path="${root_dir}/results/scgen/${DATASET}/${INCLUSION}"
-
-if [ "${SEED}" -ne "1" ]; then
+model_path="${root_dir}/models/${DATASET}"
+if [ "${SEED}" -ne "42" ]; then
   output_path="${output_path}/seed_${SEED}"
+  model_path="${root_dir}/models/${DATASET}_${SEED}"
 fi
 
 combine_flag=""
@@ -38,7 +39,7 @@ fi
 mkdir -p "${output_path}"
 export CUBLAS_WORKSPACE_CONFIG=:4096:8
 python "${root_dir}/scripts/scgen.py" \
---model_path "${root_dir}/models/${DATASET}" \
+--model_path "$model_path" \
 --data_path "$raw" \
 --output_path "$output_path" \
 --epoch 100 \
