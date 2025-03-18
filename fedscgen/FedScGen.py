@@ -243,7 +243,6 @@ class FedScGen(ScGen):
         `~anndata.AnnData`
             adata of corrected gene expression in adata.X and corrected latent space in adata.obsm["latent_corrected"].
         """
-        set_seed()
         if self.adata_latent is None:
             print("No latent representation found. Getting latent representation")
             self.get_latent_adata(self.adata)
