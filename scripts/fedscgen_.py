@@ -7,7 +7,7 @@ import ast
 import os
 from fedscgen.FedScGen import FedScGen
 from fedscgen.utils import testset_combination, aggregate, aggregate_batch_sizes, remove_cell_types, combine_cell_types, \
-    get_cuda_device, abs_diff_centrally_corrected, check_adata_nan, check_weights_nan
+    get_cuda_device, abs_diff_centrally_corrected, check_adata_nan, check_weights_nan, set_seed
 from fedscgen.plots import translate, single_plot
 import torch
 import numpy as np
@@ -209,8 +209,9 @@ if __name__ == '__main__':
     parser.add_argument("--smpc", action='store_true', default=False)
     parser.add_argument("--debug", action='store_true', default=False)
     parser.add_argument("--aggregation", type=str, default="fedavg", choices=["fedavg", "weighted_fedavg"])
+    parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
-
+    set_seed(args.seed)
     args.hidden_size = [int(num) for num in args.hidden_size.replace(" ", "").split(",")]
     args.batches = [b.strip() for b in args.batches.split(",")]
     args.ref_model = f"{args.output}/{args.ref_model}"

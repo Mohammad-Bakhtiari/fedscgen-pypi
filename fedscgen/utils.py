@@ -34,7 +34,11 @@ from collections import OrderedDict
 
 def set_seed(seed=None):
     """Sets the seed for reproducibility. Checks for an environment variable first, then defaults to SEED."""
-    seed = int(os.getenv("FedscGen_RANDOM_SEED", SEED)) if seed is None else seed
+    global SEED
+    if seed is None:
+        seed = SEED
+    else:
+        SEED = seed
 
     random.seed(seed)
     np.random.seed(seed)
@@ -50,9 +54,7 @@ def set_seed(seed=None):
     cfg.debug.debug_mode = True
     crypten.manual_seed(seed, seed, seed)
     cfg.encoder.precision_bits = 32
-
-
-set_seed(SEED)
+    print(f"✅ Seed set to {seed} (from `set_seed()`)")
 
 
 def seed_worker(worker_id):

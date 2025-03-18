@@ -1,7 +1,7 @@
 import __init__
 import argparse
 import os
-from fedscgen.utils import calc_obsm_pca
+from fedscgen.utils import calc_obsm_pca, set_seed
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Calculate and Plot NMI for a set of adata files.')
@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     # Parse the arguments
     args = parser.parse_args()
-
+    set_seed()
     adata_file_paths = {
         'Raw': args.raw,
         'ScGen': args.centralized,

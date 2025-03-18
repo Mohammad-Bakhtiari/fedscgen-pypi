@@ -2,7 +2,7 @@ import __init__
 import os
 
 from fedscgen.utils import to_csv, plot_metrics, encode_labels, normalize_data, classify_celltypes, custom_kfold,\
-    remove_cell_types, combine_cell_types, get_cuda_device
+    remove_cell_types, combine_cell_types, get_cuda_device, set_seed
 from sklearn.model_selection import StratifiedKFold
 import pandas as pd
 import numpy as np
@@ -69,6 +69,7 @@ if __name__ == '__main__':
     parser.add_argument("--gpu", type=int, default=0)
 
     args = parser.parse_args()
+    set_seed()
     args.device = get_cuda_device(args.gpu)
     if args.model == "mlp-norm":
         args.init_model_path = args.init_model_path.replace("mlp", f"mlp-{args.hidden_size}")

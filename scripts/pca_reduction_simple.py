@@ -1,7 +1,7 @@
 import __init__
 import argparse
 import os
-from fedscgen.utils import calc_obsm_pca
+from fedscgen.utils import calc_obsm_pca, set_seed
 import anndata
 
 if __name__ == "__main__":
@@ -13,6 +13,6 @@ if __name__ == "__main__":
     parser.add_argument('--output_dir', required=True, help='path to save the files.')
     # Parse the arguments
     args = parser.parse_args()
-
+    set_seed()
     adata_files = calc_obsm_pca({"a": args.path}, args.n_components)
     adata_files["a"].write(args.output_dir)

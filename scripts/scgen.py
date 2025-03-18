@@ -3,7 +3,7 @@ import argparse
 import ast
 import anndata
 from fedscgen.FedScGen import ScGen
-from fedscgen.utils import remove_cell_types, combine_cell_types, get_cuda_device
+from fedscgen.utils import remove_cell_types, combine_cell_types, get_cuda_device, set_seed
 
 
 def main(adata, args):
@@ -54,8 +54,10 @@ if __name__ == '__main__':
     parser.add_argument("--ref_model", type=str, default="ref_model")
     parser.add_argument("--remove_cell_types", type=str, default="")
     parser.add_argument("--combine", action='store_true', default=False)
+    parser.add_argument("--seed", type=int, default=42)
 
     args = parser.parse_args()
+    set_seed(args.seed)
     args.target_batches = [batch.strip() for batch in args.target_batches.strip().split(",")] if args.target_batches else []
     args.ref_model = f"{args.output_path}/{args.ref_model}"
     args.hidden_layers_sizes = [int(s.strip()) for s in args.hidden_layers_sizes.split(",")]
