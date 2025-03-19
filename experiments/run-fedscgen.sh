@@ -46,9 +46,7 @@ do
     task_name="${dataset}-${inclusion}"
     task="$task_name|${dataset}.h5ad|${DROPPED_CELLTYPES[$index]:-''}|$combined|$dropped|$batch_out|$n_clients|$batches|_GPU_"
     TASK_QUEUE+=("$task")
-    break
   done
-  break
 done
 
 chmod +x gpumaestro.sh
