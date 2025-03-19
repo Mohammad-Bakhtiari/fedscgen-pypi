@@ -137,16 +137,24 @@ def benchmark_dataset(file_path, n_components, batch_key, cell_key):
 
 def find_all_corrected_files_path(res_dir):
     inclusion_scenarios = ["all", "combined", "dropped"]
-    df = pd.DataFrame(columns=["Seed", "Epoch", "Round", "File", "Inclusion", "BatchOut"]).astype({
-        "Seed": int,
-        "Epoch": int,
-        "Round": int,
-        "File": str,
-        "Inclusion": str,
-        "BatchOut": int,
-        "Batch": int,
-        "N_Clients": int
-    })
+    df = pd.DataFrame(columns=["Seed",
+                               "Epoch",
+                               "Round",
+                               "File",
+                               "Inclusion",
+                               "BatchOut",
+                                 "Batch",
+                                    "N_Clients"
+                               ]).astype({
+                                    "Seed": int,
+                                    "Epoch": int,
+                                    "Round": int,
+                                    "File": str,
+                                    "Inclusion": str,
+                                    "BatchOut": int,
+                                    "Batch": int,
+                                    "N_Clients": int
+                                })
     # find all "corrected.h5ad"
     corrected_files = [file for file in Path(res_dir).rglob("*.h5ad") if file.is_file()]
     for file in corrected_files:
@@ -203,7 +211,25 @@ def benchmark_all(data_dir: str, approach: str, n_components, batch_key, cell_ke
     if file_exists:
         results_df = pd.read_csv(output_file)
     else:
-        results_df = pd.DataFrame(columns=["Seed", "Epoch", "Round", "File", "Inclusion", "Dataset", "Approach"])
+        results_df = pd.DataFrame(columns=["Seed",
+                                           "Epoch",
+                                           "Round",
+                                           "File",
+                                           "Inclusion",
+                                           "Dataset",
+                                           "Approach",
+                                           "BatchOut",
+                                             "Batch",
+                                                "N_Clients",
+                                             "NMI",
+                                                "GC",
+                                                "ILF1",
+                                           "ARI",
+                                             "EBM",
+                                                "KNN Acc",
+                                                "ASW_B",
+                                                "ASW_C"
+                                           ])
     for ds_name in DATASETS:
         if ds_name in os.listdir(res_dir):
             df = find_all_corrected_files_path(os.path.join(res_dir, ds_name))
