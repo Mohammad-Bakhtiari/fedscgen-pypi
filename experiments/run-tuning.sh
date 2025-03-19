@@ -6,7 +6,6 @@ declare -a TASK_QUEUE
 echo "hyperparameter tuning for including all cell types and batches"
 DATASETS=(HumanDendriticCells MouseCellAtlas HumanPancreas PBMC CellLine MouseRetina MouseHematopoieticStemProgenitorCells)
 for ds in "${DATASETS[@]}";do
-  echo -e "\e[31mRunning hyperparameter tuning for $ds\e[0m"
   n_clients=$([ "${dataset}" == "HumanPancreas" ] && echo "5" || echo "2")
   batches=$([ "${dataset}" == "HumanPancreas" ] && echo "0,1,2,3,4" || echo "0,1")
   if [ "${dataset}" == "CellLine" ]; then
