@@ -143,7 +143,9 @@ def find_all_corrected_files_path(res_dir):
         "Round": int,
         "File": str,
         "Inclusion": str,
-        "BatchOut": int
+        "BatchOut": int,
+        "Batch": int,
+        "N_Clients": int
     })
     # find all "corrected.h5ad"
     corrected_files = [file for file in Path(res_dir).rglob("*.h5ad") if file.is_file()]
@@ -155,13 +157,13 @@ def find_all_corrected_files_path(res_dir):
                 break
         basename = Path(file).stem
         seed = int(str(file).split('seed_')[1].split('/')[0]) if 'seed_' in str(file) else 42
-        epoch, round, batch_out = np.nan, np.nan, np.nan
-        if "corrected_" in basename:
+        epoch, round, batch_out, batch, n_clients = np.nan, np.nan, np.nan, np.nan, np.nan
+        parent_dir = Path(file).parent
+        if "corrected_" in basename and 'with_new_studies' not in basename:
             try:
                 round = int(basename.split("corrected_")[1].split(".h5ad")[0])
             except:
                 raise ValueError(f"Error in finding rounds in file: {file}")
-            parent_dir = Path(file).parent
             try:
                 epoch = int(parent_dir.name.split("E")[1])
             except:
@@ -169,14 +171,19 @@ def find_all_corrected_files_path(res_dir):
         if '/BO' in str(file):
             try:
                 batch_out = int(str(file).split('BO')[1][0])
+                n_clients = str(file).split(f'BO{batch_out}-C')[1][0]
+                if parent_dir.name.isdigit():
+                    batch = int(parent_dir.name)
             except:
                 raise ValueError(f"Error in finding batch out in file: {file}")
         df = pd.concat([df, pd.DataFrame({"Seed": seed,
-                                          "Epoch": epoch,
-                                          "Round": round,
-                                          "File": str(file),
-                                         "Inclusion": inclusion,
-                                          "BatchOut": batch_out
+                                            "Epoch": epoch,
+                                            "Round": round,
+                                            "File": str(file),
+                                            "Inclusion": inclusion,
+                                            "BatchOut": batch_out,
+                                            "Batch": batch,
+                                            "N_Clients": n_clients
                                           },
                                          index=[0])])
     return df
