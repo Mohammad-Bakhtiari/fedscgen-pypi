@@ -245,8 +245,7 @@ def benchmark_all(data_dir: str, approach: str, n_components, batch_key, cell_ke
                     continue
                 try:
                     print(f"[BENCHMARK] ==> {row['File']}")
-                    # metric = benchmark_dataset(row['File'], n_components, batch_key, cell_key)
-                    metric = {"NMI": 0.0, "GC": 0.0, "ILF1": 0.0, "ARI": 0.0, "EBM": 0.0, "KNN Acc": 0.0, "ASW_B": 0.0,}
+                    metric = benchmark_dataset(row['File'], n_components, batch_key, cell_key)
                     new_row_df = pd.DataFrame([{**row.to_dict(), **metric}])
                     write_header = not os.path.exists(output_file) or os.stat(output_file).st_size == 0
                     new_row_df.to_csv(output_file, mode="a", sep=",", index=False, header=write_header)
