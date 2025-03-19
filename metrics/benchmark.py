@@ -178,7 +178,7 @@ def find_all_corrected_files_path(res_dir, approach):
                 raise ValueError(f"Error in finding epochs in file: {file}")
         if '/BO' in str(file):
             try:
-                if approach == "scgen":
+                if approach == "scGen":
                     batch_out = 1
                     batch = int(str(file).split('BO')[1][0])
                 else:
@@ -237,7 +237,7 @@ def benchmark_all(data_dir: str, approach: str, n_components, batch_key, cell_ke
                                            ])
     for ds_name in DATASETS:
         if ds_name in os.listdir(res_dir):
-            df = find_all_corrected_files_path(os.path.join(res_dir, ds_name))
+            df = find_all_corrected_files_path(os.path.join(res_dir, ds_name), approach)
             df["Dataset"] = ds_name
             df["Approach"] = approach
             for index, row in df.iterrows():
