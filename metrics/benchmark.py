@@ -12,7 +12,6 @@ import sys
 parent_dir = str(Path(__file__).resolve().parent.parent)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
-from metrics.wilcoxon import seeds
 from utils import (graph_connectivity_score, isolated_label_f1_score, ari_score, bar_plot, plot_metrics_with_circles,
                    compute_ils, knn_accuracy, DATASETS, bar_plot_subplot)
 
