@@ -4,18 +4,17 @@ import anndata
 import argparse
 import os
 from scarches.metrics import nmi, entropy_batch_mixing, asw
-from utils import (graph_connectivity_score, isolated_label_f1_score, ari_score, bar_plot, plot_metrics_with_circles,
-                   compute_ils, knn_accuracy, DATASETS, bar_plot_subplot)
-import sys
 from pathlib import Path
+from sklearn.decomposition import PCA
+import sys
 
 # Add the parent directory to sys.path
 parent_dir = str(Path(__file__).resolve().parent.parent)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
-
-from sklearn.decomposition import PCA
-
+from metrics.wilcoxon import seeds
+from utils import (graph_connectivity_score, isolated_label_f1_score, ari_score, bar_plot, plot_metrics_with_circles,
+                   compute_ils, knn_accuracy, DATASETS, bar_plot_subplot)
 
 
 def calc_obsm_pca(adata_file_paths, n_components=50, common_space=False):
@@ -54,7 +53,7 @@ def calculate_and_plot_metrics(adata_dict, batch_key, cell_key, plot_name, overw
     # plot_metrics_with_circles(df, plot_name.replace(".", "-circle."))
 
 
-def benchmark(adata, latent_adata, batch_key, cell_key, approach):
+def benchmark(adata, latent_adata, batch_key, cell_key):
     nmi_value = nmi(latent_adata, cell_key)
     gc_value = graph_connectivity_score(latent_adata)
     f1_value = isolated_label_f1_score(latent_adata, cell_key, batch_key)
@@ -63,7 +62,6 @@ def benchmark(adata, latent_adata, batch_key, cell_key, approach):
     ebm_value = entropy_batch_mixing(adata, batch_key, n_neighbors=15)
     knn_acc_value = knn_accuracy(latent_adata, cell_key)
     common_metrics = {
-        'Approach': approach,
         'NMI': nmi_value,
         'GC': gc_value,
         'ILF1': f1_value,
@@ -74,7 +72,6 @@ def benchmark(adata, latent_adata, batch_key, cell_key, approach):
         'ASW_C': asw_c
     }
     return common_metrics
-
 
 def tuning_metrics(adata, latent_adata, batch_key, cell_key, epoch, round, approach):
     nmi_value = nmi(latent_adata, cell_key)
@@ -130,56 +127,95 @@ def plot_and_save(all_metrics, plot_name):
     plot_metrics_with_circles(df, plot_name.replace(".", "-circle."))
 
 
-def benchmark_dataset(approach, file_path, seed, n_components, batch_key, cell_key, ds_name):
+def benchmark_dataset(file_path, n_components, batch_key, cell_key):
     results = anndata.read_h5ad(file_path)
     latent_adata = anndata.AnnData(results.obsm[f'pca_{n_components}'])
     latent_adata.obs = results.obs
-    metrics = benchmark(results, latent_adata, batch_key, cell_key, approach)
-    metrics["Dataset"] = ds_name
-    metrics["Seed"] = seed
+    metrics = benchmark(results, latent_adata, batch_key, cell_key)
     return metrics
 
-def find_all_corrected_files_path(scgen_res_dir, fedscgen_res_dir):
-    # find all "corrected.h5ad"
-    scgen_corrected_files = []
-    for root, dirs, files in os.walk(scgen_res_dir):
-        for file in files:
-            if file.endswith("corrected.h5ad"):
-                file_path = os.path.join(root, file)
-                seed = int(file_path.split('seed_')[1].split('/')[0]) if 'seed_' in file_path else -1
-                scgen_corrected_files.append((file_path, seed))
-    fedscgen_corrected_files = []
-    for root, dirs, files in os.walk(fedscgen_res_dir):
-        for file in files:
-            if file.endswith("fed_corrected.h5ad"):
-                file_path = os.path.join(root, file)
-                seed = int(file_path.split('seed_')[1].split('/')[0]) if 'seed_' in file_path else -1
-                fedscgen_corrected_files.append((file_path, seed))
-    return ('scGen', scgen_corrected_files), ('FedscGen', fedscgen_corrected_files)
 
-def benchmark_all_datasets(fed_data_dir: str, cent_data_dir: str, inclusion: str, n_components: int, batch_key: str,
-                           cell_key: str):
-    # output_file = os.path.join(fed_data_dir, f"fed_cent_metrics-{inclusion}.csv")
-    # results_df = pd.read_csv(output_file)
+
+def find_all_corrected_files_path(res_dir):
+    inclusion_scenarios = ["all", "combined", "dropped"]
+    df = pd.DataFrame(columns=["Seed", "Epoch", "Round", "File", "Inclusion", "BatchOut"]).astype({
+        "Seed": int,
+        "Epoch": int,
+        "Round": int,
+        "File": str,
+        "Inclusion": str,
+        "BatchOut": int
+    })
+    # find all "corrected.h5ad"
+    corrected_files = [file for file in Path(res_dir).rglob("*.h5ad") if file.is_file()]
+    for file in corrected_files:
+        inclusion = "all"
+        for scenario in inclusion_scenarios:
+            if scenario in str(file):
+                inclusion = scenario
+                break
+        basename = Path(file).stem
+        seed = int(str(file).split('seed_')[1].split('/')[0]) if 'seed_' in str(file) else 42
+        epoch, round, batch_out = np.nan, np.nan, np.nan
+        if "corrected_" in basename:
+            try:
+                round = int(basename.split("corrected_")[1].split(".h5ad")[0])
+            except:
+                raise ValueError(f"Error in finding rounds in file: {file}")
+            parent_dir = Path(file).parent
+            try:
+                epoch = int(parent_dir.name.split("E")[1])
+            except:
+                raise ValueError(f"Error in finding epochs in file: {file}")
+        if '/BO' in str(file):
+            try:
+                batch_out = int(str(file).split('BO')[1][0])
+            except:
+                raise ValueError(f"Error in finding batch out in file: {file}")
+        df = pd.concat([df, pd.DataFrame({"Seed": seed,
+                                          "Epoch": epoch,
+                                          "Round": round,
+                                          "File": str(file),
+                                         "Inclusion": inclusion,
+                                          "BatchOut": batch_out
+                                          },
+                                         index=[0])])
+    return df
+
+def benchmark_all(data_dir: str, approach: str, n_components, batch_key, cell_key, tuning=False):
+    approaches = {"scgen": "scGen", "fedscgen": "FedscGen", "fedscgen-smpc": "FedscGen-SMPC"}
+    if tuning:
+        assert approach == "fedscgen", "Only FedscGen approach is supported for tuning"
+        res_dir = data_dir
+        approach = "FedscGen"
+    else:
+        assert approach in approaches.keys(), "Approach must be one of {}".format(approaches.keys())
+        res_dir = os.path.join(data_dir, approach)
+        approach = approaches[approach]
+    output_file = os.path.join(res_dir, f"benchmark_metrics.csv")
+    file_exists = os.path.exists(output_file) and os.stat(output_file).st_size > 0
+    if file_exists:
+        results_df = pd.read_csv(output_file)
+    else:
+        results_df = pd.DataFrame(columns=["Seed", "Epoch", "Round", "File", "Inclusion", "Dataset", "Approach"])
     for ds_name in DATASETS:
-        if inclusion != "all" and ds_name in ["CellLine", "HumanDendriticCells"]:
-            continue
-        print(f"Processing {ds_name} {inclusion}...")
-        corrected_files = find_all_corrected_files_path(os.path.join(cent_data_dir, ds_name, inclusion), os.path.join(fed_data_dir, ds_name, inclusion))
-        for approach, files in corrected_files:
-            for file_path, seed in files:
-                if '/BO1' in file_path:
+        if ds_name in os.listdir(res_dir):
+            df = find_all_corrected_files_path(os.path.join(res_dir, ds_name))
+            df["Dataset"] = ds_name
+            df["Approach"] = approach
+            for index, row in df.iterrows():
+                if row['File'] in results_df["File"].values:
                     continue
-                # if len(results_df[(results_df["Approach"] == approach) & (results_df["Dataset"] == ds_name) & (results_df["Seed"] == seed)]) > 0:
-                #     continue
                 try:
-                    print(f"[BENCHMARK]: {ds_name}, {approach}, {seed} ==> {file_path}")
-                    # metric = benchmark_dataset(approach, file_path, seed, n_components, batch_key, cell_key, ds_name)
-                    # df = pd.DataFrame([metric])
-                    # df.to_csv(output_file, mode='a', sep=",", index=False, header=not os.path.exists(output_file))
+                    print(f"[BENCHMARK] ==> {row['File']}")
+                    # metric = benchmark_dataset(row['File'], n_components, batch_key, cell_key)
+                    metric = {"NMI": 0.0, "GC": 0.0, "ILF1": 0.0, "ARI": 0.0, "EBM": 0.0, "KNN Acc": 0.0, "ASW_B": 0.0,}
+                    new_row_df = pd.DataFrame([{**row.to_dict(), **metric}])
+                    write_header = not os.path.exists(output_file) or os.stat(output_file).st_size == 0
+                    new_row_df.to_csv(output_file, mode="a", sep=",", index=False, header=write_header)
                 except Exception as e:
-                    print(f"Error processing dataset: {ds_name}, file: {file_path}, seed: {seed}. Error: {e}")
-                    continue  # Skip to the next file but continue processing others
+                    print(f"Error processing dataset: {ds_name}, file: {row['File']}, seed: {row['Seed']}. Error: {e}")
+                    continue
 
 
 def benchmark_reproduce(fed_data_dir: str, cent_data_dir: str, inclusion: str, n_components: int, batch_key: str,
@@ -207,75 +243,6 @@ def benchmark_reproduce(fed_data_dir: str, cent_data_dir: str, inclusion: str, n
     print(tun_diff)
 
 
-def benchmark_batch_out(fed_data_dir, cent_data_dir, n_batches, n_components, batch_key, cell_key):
-    """
-
-    Parameters
-    ----------
-    fed_data_dir
-        /home/bba1658/FedscGen/results/scgen/federated/HumanPancreas/all/BO1-C4
-    cent_data_dir: str
-        /home/bba1658/FedscGen/results/scgen/centralized/HumanPancreas/all
-    n_batches
-    n_components
-    batch_key
-    cell_key
-
-    Returns
-    -------
-
-    """
-    all_metrics = []
-    for b in range(n_batches):
-        fedscgen = anndata.read_h5ad(os.path.join(fed_data_dir, f"{b}", "fed_corrected_with_new_studies.h5ad"))
-        latent_adata = anndata.AnnData(fedscgen.obsm[f'pca_{n_components}'])
-        latent_adata.obs = fedscgen.obs
-        fedscgen_metrics = benchmark(fedscgen, latent_adata, batch_key, cell_key, "FedscGen")
-        fedscgen_metrics["Batch Out"] = b
-        scgen = anndata.read_h5ad(os.path.join(cent_data_dir, f"BO{b}", "corrected.h5ad"))
-        latent_adata = anndata.AnnData(scgen.obsm[f'pca_{n_components}'])
-        latent_adata.obs = scgen.obs
-        scgen_metrics = benchmark(scgen, latent_adata, batch_key, cell_key, "scGen")
-        scgen_metrics["Batch Out"] = b
-        all_metrics.extend([fedscgen_metrics, scgen_metrics])
-    df = pd.DataFrame(all_metrics)
-    df.to_csv(os.path.join(fed_data_dir, "batchout_metrics.csv"), sep=",", index=False)
-
-
-def benchmark_tuning(data_dir, n_components, batch_key, cell_key):
-    """
-    benchmark all files in the tuning directory
-    Returns
-    -------
-
-    """
-    h5ad_files = {}
-    for epoch in range(1, 11):
-        files = {}
-        for round in range(1, 11):
-            files[round] = os.path.join(data_dir, f"E{epoch}", f"corrected_{round}.h5ad")
-        files = sorted(files.items(), key=lambda x: x[0])
-        h5ad_files[epoch] = files
-    all_metrics = []
-    sorted_files = sorted(h5ad_files.items(), key=lambda x: x[0])
-    for epoch, file in sorted_files:
-        for round, path in file:
-            adata = anndata.read_h5ad(path)
-            latent_adata = anndata.AnnData(adata.obsm[f'pca_{n_components}'])
-            latent_adata.obs = adata.obs
-            all_metrics.append(
-                tuning_metrics(adata, latent_adata, batch_key, cell_key, epoch, round, 'FedscGen'))
-    # add scGen
-    adata = anndata.read_h5ad(os.path.join(data_dir, "scGen.h5ad"))
-    latent_adata = anndata.AnnData(adata.obsm[f'pca_{n_components}'])
-    latent_adata.obs = adata.obs
-    all_metrics.append(tuning_metrics(adata, latent_adata, batch_key, cell_key, 0, 0, f"scGen"))
-    df = pd.DataFrame(all_metrics)
-    plot_name = os.path.join(data_dir, "metrics.png")
-    df.to_csv(os.path.join(data_dir, "metrics.csv"), sep=",", index=False)
-    bar_plot_subplot(df, plot_name)
-
-
 def load_metrics_and_plot(df_path, plot_name):
     df = pd.read_csv(df_path)
     bar_plot(df, plot_name.replace(".", "-bar."))
@@ -295,7 +262,8 @@ if __name__ == "__main__":
     parser.add_argument('--cell_key', help='Cell key name.', default="cell_type")
     parser.add_argument('--batch_key', help='Batch key name.', default="batch")
     parser.add_argument("--scenarios", type=str, default="all",
-                        choices=["datasets", "batch-out", "snapshots", "tuning", "reproduce"])
+                        choices=["approach", "tuning", "reproduce"])
+    parser.add_argument("--approach", type=str, default="fedscgen", choices=["fedscgen", "scgen", "fedscgen-smpc"])
     parser.add_argument("--n_rounds", type=int, default=10, help="Number of rounds for snapshots")
     parser.add_argument("--n_batches", type=int, default=10, help="Number of batches for batch-out")
     parser.add_argument("--plot_only", action="store_true", default=False, help="Plot the metrics")
@@ -309,14 +277,11 @@ if __name__ == "__main__":
             load_metrics_and_plot(os.path.join(args.data_dir, "metrics.csv"),
                                   os.path.join(args.data_dir, "metrics.png"))
     else:
-        if args.scenarios == "datasets":
-            benchmark_all_datasets(args.fed_data_dir, args.data_dir, args.inclusion, args.n_components, args.batch_key,
-                                   args.cell_key)
-        elif args.scenarios == "batch-out":
-            benchmark_batch_out(args.fed_data_dir, args.data_dir, args.n_batches, args.n_components, args.batch_key,
-                                args.cell_key)
+        if args.scenarios == "approach":
+            benchmark_all(args.data_dir, args.approach, args.n_components, args.batch_key,
+                          args.cell_key)
         elif args.scenarios == "tuning":
-            benchmark_tuning(args.data_dir, args.n_components, args.batch_key, args.cell_key)
+            benchmark_all(args.data_dir, "fedscgen", args.n_components, args.batch_key, args.cell_key, tuning=True)
         elif args.scenarios == "reproduce":
             benchmark_reproduce(args.fed_data_dir, args.data_dir, args.inclusion, args.n_components, args.batch_key,
                                 args.cell_key)
