@@ -159,8 +159,8 @@ def find_all_corrected_files_path(scgen_res_dir, fedscgen_res_dir):
 
 def benchmark_all_datasets(fed_data_dir: str, cent_data_dir: str, inclusion: str, n_components: int, batch_key: str,
                            cell_key: str):
-    output_file = os.path.join(fed_data_dir, f"fed_cent_metrics-{inclusion}.csv")
-    results_df = pd.read_csv(output_file)
+    # output_file = os.path.join(fed_data_dir, f"fed_cent_metrics-{inclusion}.csv")
+    # results_df = pd.read_csv(output_file)
     for ds_name in DATASETS:
         if inclusion != "all" and ds_name in ["CellLine", "HumanDendriticCells"]:
             continue
@@ -170,12 +170,13 @@ def benchmark_all_datasets(fed_data_dir: str, cent_data_dir: str, inclusion: str
             for file_path, seed in files:
                 if '/BO1' in file_path:
                     continue
-                if len(results_df[(results_df["Approach"] == approach) & (results_df["Dataset"] == ds_name) & (results_df["Seed"] == seed)]) > 0:
-                    continue
+                # if len(results_df[(results_df["Approach"] == approach) & (results_df["Dataset"] == ds_name) & (results_df["Seed"] == seed)]) > 0:
+                #     continue
                 try:
-                    metric = benchmark_dataset(approach, file_path, seed, n_components, batch_key, cell_key, ds_name)
-                    df = pd.DataFrame([metric])
-                    df.to_csv(output_file, mode='a', sep=",", index=False, header=not os.path.exists(output_file))
+                    print(f"[BENCHMARK]: {ds_name}, {approach}, {seed} ==> {file_path}")
+                    # metric = benchmark_dataset(approach, file_path, seed, n_components, batch_key, cell_key, ds_name)
+                    # df = pd.DataFrame([metric])
+                    # df.to_csv(output_file, mode='a', sep=",", index=False, header=not os.path.exists(output_file))
                 except Exception as e:
                     print(f"Error processing dataset: {ds_name}, file: {file_path}, seed: {seed}. Error: {e}")
                     continue  # Skip to the next file but continue processing others
