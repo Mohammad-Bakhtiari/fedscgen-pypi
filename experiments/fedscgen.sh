@@ -66,7 +66,6 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
         --batch_size 50 \
         --hidden_size \"800,800\" \
         --z_dim 10 \
-        --early_stopping_kwargs '{\"early_stopping_metric\": \"val_loss\", \"patience\": 20, \"threshold\": 0, \"reduce_lr\": true, \"lr_patience\": 13, \"lr_factor\": 0.1}' \
         --batch_out \"$batch_out\" \
         --n_clients \"$n_clients\" \
         --remove_cell_types \"$REMOVE_CELL_TYPES\" \
