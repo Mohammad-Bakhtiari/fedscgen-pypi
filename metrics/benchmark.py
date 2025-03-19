@@ -135,7 +135,7 @@ def benchmark_dataset(file_path, n_components, batch_key, cell_key):
 
 
 
-def find_all_corrected_files_path(res_dir):
+def find_all_corrected_files_path(res_dir, approach):
     inclusion_scenarios = ["all", "combined", "dropped"]
     df = pd.DataFrame(columns=["Seed",
                                "Epoch",
@@ -178,10 +178,15 @@ def find_all_corrected_files_path(res_dir):
                 raise ValueError(f"Error in finding epochs in file: {file}")
         if '/BO' in str(file):
             try:
-                batch_out = int(str(file).split('BO')[1][0])
-                n_clients = str(file).split(f'BO{batch_out}-C')[1][0]
-                if parent_dir.name.isdigit():
-                    batch = int(parent_dir.name)
+                if approach == "scgen":
+                    batch_out = 1
+                    batch = int(str(file).split('BO')[1][0])
+                else:
+                    batch_out = int(str(file).split('BO')[1][0])
+
+                    n_clients = str(file).split(f'BO{batch_out}-C')[1][0]
+                    if parent_dir.name.isdigit():
+                        batch = int(parent_dir.name)
             except:
                 raise ValueError(f"Error in finding batch out in file: {file}")
         df = pd.concat([df, pd.DataFrame({"Seed": seed,
