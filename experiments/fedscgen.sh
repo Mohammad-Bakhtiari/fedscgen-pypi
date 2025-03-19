@@ -52,6 +52,8 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
     mkdir -p "${output}"
     echo "Running $batch_out batch out for $n_clients clients"
     export CUBLAS_WORKSPACE_CONFIG=:4096:8
+    echo "combine: $combine_flag"
+    echo "snapshot: $snapshot_flag"
     python3 "${root_dir}/scripts/fedscgen_.py" --debug \
         --init_model_path "${root_dir}/models/${DATASET}" \
         --adata "$raw" \
