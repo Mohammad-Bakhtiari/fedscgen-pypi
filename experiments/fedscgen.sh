@@ -54,28 +54,35 @@ for i in "${!BATCH_OUT_VALUES[@]}"; do
     export CUBLAS_WORKSPACE_CONFIG=:4096:8
     echo "combine: $combine_flag"
     echo "snapshot: $snapshot_flag"
-    python3 "${root_dir}/scripts/fedscgen_.py" --debug \
-        --init_model_path "${root_dir}/models/${DATASET}" \
-        --adata "$raw" \
-        --output  "$output"\
-        --epoch "$EPOCH" \
-        --cell_key "cell_type" \
-        --batch_key "batch" \
-        --batches "$BATCHES" \
+    CMD="python3 \"${root_dir}/scripts/fedscgen_.py\" \
+        --init_model_path \"${root_dir}/models/${DATASET}\" \
+        --adata \"$raw\" \
+        --output \"$output\" \
+        --epoch \"$EPOCH\" \
+        --cell_key \"cell_type\" \
+        --batch_key \"batch\" \
+        --batches \"$BATCHES\" \
         --lr 0.001 \
         --batch_size 50 \
-        --hidden_size "800,800" \
+        --hidden_size \"800,800\" \
         --z_dim 10 \
-        --early_stopping_kwargs '{"early_stopping_metric": "val_loss", "patience": 20, "threshold": 0, "reduce_lr": True, "lr_patience": 13, "lr_factor": 0.1}' \
-        --batch_out "$batch_out" \
-        --n_clients "$n_clients" \
-        --remove_cell_types "$REMOVE_CELL_TYPES" \
-        --gpu "$GPU" \
-        --n_rounds "$ROUND"   \
-        --aggregation "weighted_fedavg" \
-        $combine_flag \
-        "$snapshot_flag"
+        --early_stopping_kwargs '{\"early_stopping_metric\": \"val_loss\", \"patience\": 20, \"threshold\": 0, \"reduce_lr\": true, \"lr_patience\": 13, \"lr_factor\": 0.1}' \
+        --batch_out \"$batch_out\" \
+        --n_clients \"$n_clients\" \
+        --remove_cell_types \"$REMOVE_CELL_TYPES\" \
+        --gpu \"$GPU\" \
+        --n_rounds \"$ROUND\" \
+        --aggregation \"weighted_fedavg\""
 
+    if [ ! -z "$combine_flag" ]; then
+        CMD+=" $combine_flag"
+    fi
+
+    if [ ! -z "$snapshot_flag" ]; then
+        CMD+=" $snapshot_flag"
+    fi
+
+    eval $CMD
     if [ "$SNAPSHOT" = "true" ]; then
         for corrected in "$output"/*.h5ad; do
           echo -e "\e[33mPCA on $corrected\e[0m \n "
