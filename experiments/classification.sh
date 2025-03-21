@@ -9,12 +9,14 @@ echo "Args: approach: $approach, dataset: $dataset, GPU: $GPU, n_clients: $n_cli
 
 root_dir="$(dirname "$PWD")"
 output="${root_dir}/results/${approach}/${dataset}"
+
 if [ "$approach" == "scgen" ]; then
   adata="${output}/all/corrected.h5ad"
   output="${output}/all/classification"
 else
   if [ "$approach" == "fedscgen" ]; then
     output="${output}/all/BO0-C${n_clients}"
+  fi
   adata="${output}/fed_corrected.h5ad"
   output="${output}/classification"
 fi
@@ -36,6 +38,7 @@ if $all_exist; then
   exit 0
 fi
 echo "🚀 Running classification for $approach on $dataset..."
+
 #export CUBLAS_WORKSPACE_CONFIG=:4096:8
 #python "${root_dir}/scripts/classification.py" \
 #      --adata "$adata" \
