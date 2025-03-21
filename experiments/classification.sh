@@ -6,13 +6,15 @@ n_clients=$4
 echo "Args: approach: $approach, dataset: $dataset, GPU: $GPU, n_clients: $n_clients"
 
 root_dir="$(dirname "$PWD")"
-output="${root_dir}/results/${approach}/${dataset}/all"
+output="${root_dir}/results/${approach}/${dataset}"
 if [ "$approach" == "scgen" ]; then
-  adata="${output}/corrected.h5ad"
-  output="${output}/classification"
+  adata="${output}/all/corrected.h5ad"
+  output="${output}/all/classification"
 else
-  adata="${output}/BO0-C${n_clients}/fed_corrected.h5ad"
-  output="${output}/BO0-C${n_clients}/classification"
+  if [ "$approach" == "fedscgen" ]; then
+    output="${output}/all/BO0-C${n_clients}"
+  adata="${output}/fed_corrected.h5ad"
+  output="${output}/classification"
 fi
 if [[ ! -f "$adata" ]]; then
   echo "ERROR: Missing adata file: $adata"
