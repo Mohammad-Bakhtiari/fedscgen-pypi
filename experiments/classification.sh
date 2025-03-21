@@ -26,7 +26,7 @@ if [[ ! -f "$adata" ]]; then
 fi
 all_exist=true
 for ((n=0; n<${n_clients}; n++)); do
-  f="${output}/classification_${n}.csv"
+  f="${output}/classification_acc_${n}.csv"
   if [[ ! -f "$f" ]]; then
     all_exist=false
     break
