@@ -5,6 +5,7 @@ AVAILABLE_GPUS="${1:-0,1,2,3}"
 declare -a TASK_QUEUE
 
 DATASETS=(HumanDendriticCells MouseCellAtlas HumanPancreas PBMC CellLine MouseRetina MouseHematopoieticStemProgenitorCells MouseBrain)
+DATASETS=(HumanPancreas)
 
 for dataset in "${DATASETS[@]}"; do
   case "$dataset" in
