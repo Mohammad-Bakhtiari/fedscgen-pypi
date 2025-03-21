@@ -27,6 +27,7 @@ fi
 all_exist=true
 for ((n=0; n<${n_clients}; n++)); do
   f="${output}/classification_acc_${n}.csv"
+  echo "Checking $f"
   if [[ ! -f "$f" ]]; then
     all_exist=false
     break
