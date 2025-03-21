@@ -43,6 +43,7 @@ do
     fi
     combined=$([ "$inclusion" == "combined" ] && echo true || echo false)
     dropped=$([ "$inclusion" == "dropped" ] && echo true || echo false)
+    dropped_celltypes=''
     if [ "$inclusion" != "all" ]; then
       dropped_celltypes="${DROPPED_CELLTYPES[$index]:-''}"
     fi
