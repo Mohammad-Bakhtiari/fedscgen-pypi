@@ -25,7 +25,7 @@ if [[ ! -f "$adata" ]]; then
   exit 1
 fi
 all_exist=true
-for ((n=1; n<${n_clients}; n++)); do
+for ((n=1; n<=${n_clients}; n++)); do
   f="${output}/classification_acc_${n}.csv"
   echo "Checking $f"
   if [[ ! -f "$f" ]]; then
