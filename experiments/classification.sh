@@ -50,4 +50,3 @@ echo "🚀 Running classification for $approach on $dataset..."
 #      --model "mlp-norm" \
 #      --hidden_size "800,200" \
 #      --batch_out "1" \
-#      --gpu "$GPU"
