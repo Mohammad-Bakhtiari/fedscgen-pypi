@@ -25,7 +25,6 @@ def cross_validate(x, y, epochs, batch_size, lr, output_dir, model, hidden_size,
 
     for fold, (train_ind, test_ind) in enumerate(kf, 1):
         x_train, y_train, x_test, y_test = x[train_ind], y[train_ind], x[test_ind], y[test_ind]
-        print(init_model)
         metrics = classify_celltypes(x_train, y_train, x_test, y_test, epochs, lr, batch_size, n_classes, init_model,
                                      model, hidden_size, device)
 
@@ -91,7 +90,6 @@ if __name__ == '__main__':
     if len(args.norm_method) > 0:
         x = normalize_data(x, args.norm_method)
     y = adata.obs[args.cell_key]
-    print(args.init_model_path)
     cross_validate(x=x,
                    y=y,
                    epochs=args.epoch,

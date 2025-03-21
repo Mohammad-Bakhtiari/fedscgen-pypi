@@ -13,8 +13,7 @@ for dataset in "${DATASETS[@]}"; do
     "CellLine") n_clients="3" ;;
     *) n_clients="2" ;;
   esac
-#  for approach in "scgen" "fedscgen" "fedscgen-smpc"; do
-  for approach in "fedscgen"; do
+  for approach in "scgen" "fedscgen" "fedscgen-smpc"; do
     task_name="${dataset}-${approach}"
     task="$task_name|$approach|$dataset|_GPU_|$n_clients"
     TASK_QUEUE+=("$task")
