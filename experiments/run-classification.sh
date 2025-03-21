@@ -17,6 +17,7 @@ for dataset in "${DATASETS[@]}"; do
     task_name="${dataset}-${approach}"
     task="$task_name|$approach|$dataset|_GPU_|$n_clients"
     TASK_QUEUE+=("$task")
+    break
   done
 done
 chmod +x gpumaestro.sh
