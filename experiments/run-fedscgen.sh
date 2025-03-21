@@ -43,8 +43,11 @@ do
     fi
     combined=$([ "$inclusion" == "combined" ] && echo true || echo false)
     dropped=$([ "$inclusion" == "dropped" ] && echo true || echo false)
+    if [ "$inclusion" != "all" ]; then
+      dropped_celltypes="${DROPPED_CELLTYPES[$index]:-''}"
+    fi
     task_name="${dataset}-${inclusion}"
-    task="$task_name|${dataset}.h5ad|${DROPPED_CELLTYPES[$index]:-''}|$combined|$dropped|$batch_out|$n_clients|$batches|_GPU_"
+    task="$task_name|${dataset}.h5ad|${dropped_celltypes}|$combined|$dropped|$batch_out|$n_clients|$batches|_GPU_"
     TASK_QUEUE+=("$task")
   done
 done
