@@ -36,6 +36,8 @@ done
 if $all_exist; then
   echo "✅ All classification outputs already exist. Skipping..."
   exit 0
+else
+  echo "❌ Some classification outputs are missing out {1..$n_clients}."
 fi
 export CUBLAS_WORKSPACE_CONFIG=:4096:8
 python "${root_dir}/scripts/classification.py" \
