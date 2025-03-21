@@ -25,7 +25,7 @@ if [[ ! -f "$adata" ]]; then
   exit 1
 fi
 all_exist=true
-for ((n=0; n<n_clients; n++)); do
+for ((n=1; n<=n_clients; n++)); do
   f="${output}/classification_${n}.csv"
   if [[ ! -f "$f" ]]; then
     all_exist=false
