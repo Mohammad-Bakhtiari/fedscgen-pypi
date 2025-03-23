@@ -765,11 +765,11 @@ def read_smpc_wilcoxon_benchmarks(data_dir, filename="benchmark_metrics.csv"):
     -------
     """
     def read_benchmarks(approach):
-        fedscgenile_path = os.path.join(data_dir, approach, filename)
-        if os.path.exists(fedscgenile_path):
-            df = pd.read_csv(fedscgenile_path)
+        file_path = os.path.join(data_dir, approach, filename)
+        if os.path.exists(file_path):
+            df = pd.read_csv(file_path)
         else:
-            raise FileNotFoundError(fedscgenile_path)
+            raise FileNotFoundError(file_path)
         df = df[df.Batch.isna() & df.BatchOut.isna() & (df.Inclusion == "all") & (df.Dataset != "MouseBrain")]
         df.drop(columns=["Inclusion", "Epoch", "Round", "Batch", "BatchOut", "N_Clients", "File"], inplace=True)
         return df
