@@ -14,6 +14,8 @@ from utils import DATASETS_COLORS, DATASETS_MARKERS, DATASETS_ACRONYM, DATASETS
 import glob
 import sys
 from pathlib import Path
+from scipy import stats
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 # Add the parent directory to sys.path
 parent_dir = str(Path(__file__).resolve().parent.parent)
@@ -752,7 +754,103 @@ def classification_error_bar_plot(data_dir):
 
 def plot_smpc_wilcoxon_heatmap(data_dir, plot_name="smpc-wilcoxon.png"):
     df = read_smpc_wilcoxon_benchmarks(data_dir)
+    diff_df = validate_symmetry(df, dict(zip(DATASETS, DATASETS_ACRONYM)))
+    datasets = df.Dataset.unique()
+    corrected_p_values, avg_data = get_corrected_p_values(diff_df, datasets, diff_df.Seed.unique())
+    avg_df = pd.DataFrame(avg_data, index=df.Dataset.unique(), columns=df.columns)
+    wilcoxon_diff_heatmap(df, avg_df, corrected_p_values, datasets, data_dir)
     df.to_csv(os.path.join(data_dir, "smpc_wilcoxon.csv"), index=False)
+
+
+def wilcoxon_diff_heatmap(df, avg_df, p_values, datasets, file_path):
+    metrics = df.columns
+    annotations = avg_df.copy().astype(str)
+
+    for i in range(len(datasets)):
+        for j in range(len(metrics)):
+            annotations.iloc[i, j] = f"{avg_df.iloc[i, j]:.2f}"  # FIXED HERE
+
+    # Create heatmap
+    fig, ax = plt.subplots(1,1,figsize=(16, 14), squeeze=True)
+    fig.subplots_adjust(left=0.15, right=0.9, top=0.9, bottom=0.15, wspace=0.01, hspace=0.01)
+    abs_max = 1  # Max range for colormap
+    sns.heatmap(avg_df, annot=annotations, fmt="", cmap='RdBu', center=0, ax=ax, cbar=False,
+                annot_kws={"size": 32}, square=True, vmin=-abs_max, vmax=abs_max)
+    # Set title and labels
+    ax.set_title("")
+    ax.grid(False)
+    ax.set_ylabel("")
+    ax.set_xlabel("")
+    ax.set_yticklabels(ax.get_yticklabels(), fontsize=30, rotation=0, ha='right')
+    ax.set_xticklabels(ax.get_xticklabels(), fontsize=30, rotation=45, ha='right')
+    # Add colorbar
+    norm = colors.Normalize(vmin=-abs_max, vmax=abs_max)
+    mappable = plt.cm.ScalarMappable(cmap='RdBu', norm=norm)
+    cbar_ax = fig.add_axes([0.81, 0.25, 0.02, 0.5])
+    cbar = plt.colorbar(mappable, cax=cbar_ax)
+    cbar.ax.tick_params(labelsize=24)
+    # Manually add stars above numbers
+    for i in range(len(datasets)):
+        for j in range(len(metrics)):
+            p = p_values[i, j]
+            stars = ""
+            if p < 0.01:
+                stars = "***"
+            elif p < 0.05:
+                stars = "**"
+            elif p < 0.1:
+                stars = "*"
+
+            if stars:
+                ax.text(j + 0.5, i + 0.25, stars, fontsize=28, ha='center', va='bottom', color='black',
+                        fontweight='bold')
+    plt.savefig(f"{file_path}/heatmap.png", dpi=300)
+    plt.close()
+
+def get_corrected_p_values(df, datasets, seeds):
+    """
+    Computes Wilcoxon signed-rank test for each dataset-metric pair across all seeds.
+    Applies FDR correction for multiple testing.
+    """
+    df_wide = df.pivot(index=['Seed', 'Dataset'], columns='Metric', values='Difference')
+    df_wide.reset_index(inplace=True)
+
+    # Optional: Sort by Dataset and Seed if needed
+    df_wide = df_wide.sort_values(by=['Dataset', 'Seed']).reset_index(drop=True)
+    df = df_wide.copy()
+    num_datasets = len(datasets)
+    num_metrics = len(df.columns)
+    num_seeds = len(seeds)
+
+    # Reshape data to handle seeds explicitly
+    avg_data = np.zeros((num_datasets, num_metrics))  # Store mean performance differences
+    p_values = np.full((num_datasets, num_metrics), np.nan)  # Initialize with NaN
+
+    for i, dataset in enumerate(datasets):
+        start_idx = i * num_seeds
+        end_idx = (i + 1) * num_seeds
+        dataset_data = df.iloc[start_idx:end_idx]  # Extract data for this dataset
+
+        for j, metric in enumerate(df.columns):
+            metric_values = dataset_data[metric].values
+
+            if np.std(metric_values) > 0:  # Ensure variation exists
+                # Wilcoxon signed-rank test across all seeds for this dataset-metric pair
+                stat, p = wilcoxon(metric_values)
+                p_values[i, j] = p  # Store p-value
+
+            # Compute average performance difference
+            avg_data[i, j] = np.mean(metric_values)
+
+    # Multiple testing correction (FDR)
+    valid_p_values = p_values[~np.isnan(p_values)]  # Filter out NaNs
+    corrected_p = multipletests(valid_p_values, method='fdr_bh')[1]
+
+    # Store corrected p-values
+    p_values_corrected = np.full_like(p_values, np.nan)
+    p_values_corrected[~np.isnan(p_values)] = corrected_p
+
+    return p_values_corrected, avg_data
 
 
 def read_smpc_wilcoxon_benchmarks(data_dir, filename="benchmark_metrics.csv"):
@@ -794,6 +892,203 @@ def read_smpc_wilcoxon_benchmarks(data_dir, filename="benchmark_metrics.csv"):
     assert fedscgen_smpc_df["Seed"].equals(scgen_df["Seed"]), "❌ Seed values do not match!"
     combined_df = pd.concat([fedscgen_smpc_df, scgen_df], ignore_index=True)
     return combined_df
+
+def validate_symmetry(df, ds_map):
+    df_pivot = df.pivot(index=['Seed', 'Dataset'], columns='Approach')
+    metrics = [c for c in df.columns if c not in ['Seed', 'Dataset', 'Approach']]
+    df_diff = df_pivot.xs('FedscGen-SMPC', axis=1, level=1)[metrics] - df_pivot.xs('scGen', axis=1, level=1)[metrics]
+    df_diff.reset_index(inplace=True)
+    df = df_diff.melt(id_vars=['Seed', 'Dataset'], var_name='Metric', value_name='Difference')
+    df = df[df.Metric != "ILF1"]
+    df = df[df.Metric != "GC"]
+    if 'Unnamed: 0' in df.columns:
+        df = df.drop(columns=['Unnamed: 0'])
+    df.Dataset = df.Dataset.apply(lambda x: ds_map[x])
+    datasets = df.Dataset.unique()
+    metrics =  df.Metric.unique()
+    seeds = df.Seed.unique()
+    diff_df = df # compute_differences(df, datasets, metrics, seeds)
+    os.makedirs("qq_plots", exist_ok=True)
+    os.makedirs("histograms", exist_ok=True)
+    plot_all_distributions(diff_df, save_path="symmetry_grid.png")
+    symmetry_df = calculate_symmetry_metrics(diff_df, datasets, metrics)
+    # check_symmetry_holds(symmetry_df, skewness_threshold=0.5, bowley_threshold=0.3)
+    check_symmetry_by_skewness(symmetry_df, skewness_threshold=1)
+    return diff_df
+
+def plot_all_distributions(diff_df, save_path="diff_grid_metrics_rows_with_inset.png"):
+    metrics = sorted(diff_df["Metric"].unique())
+    datasets = sorted(diff_df["Dataset"].unique())
+    n_rows = len(metrics)
+    n_cols = len(datasets)
+
+    # Single subplot per dataset-metric pair (QQ with inset histogram)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 3.5 * n_rows))
+
+    # Handle case where there's only one row or column
+    if n_rows == 1:
+        axes = np.array([axes])
+    if n_cols == 1:
+        axes = axes.reshape(-1, 1)
+
+    for i, metric in enumerate(metrics):
+        for j, dataset in enumerate(datasets):
+            diffs = diff_df[
+                (diff_df["Dataset"] == dataset) & (diff_df["Metric"] == metric)
+                ]["Difference"].values
+
+            # QQ plot
+            ax = axes[i][j]
+            stats.probplot(diffs, dist="norm", plot=ax)
+
+            # Style the QQ plot
+            ax.get_lines()[0].set_marker('o')
+            ax.get_lines()[0].set_color('blue')
+            ax.get_lines()[1].set_color('red')
+            ax.get_lines()[1].set_linewidth(2)
+
+            # Add inset for histogram + KDE (upper left, like your example)
+            ax_inset = inset_axes(ax, width="40%", height="40%", loc="upper left")
+            sns.histplot(diffs, kde=True, bins=5, ax=ax_inset, color="lightblue", edgecolor="gray")
+            ax_inset.set_title("", fontsize=8)
+            ax_inset.set_xlabel("", fontsize=6)
+            ax_inset.set_ylabel("", fontsize=6)
+            ax_inset.tick_params(labelsize=6)
+            xlim = ax_inset.get_xlim()
+            x_ticks = [xlim[0], xlim[1]]
+            ax_inset.set_xticks(x_ticks)
+            ax_inset.set_xticklabels([f"{x:.2f}" for x in x_ticks], fontsize=8)
+
+            ylim = ax_inset.get_ylim()
+            y_ticks = [1, int(np.floor(max(ylim)))]
+            ax_inset.set_yticks(y_ticks)
+            ax_inset.set_yticklabels(y_ticks, fontsize=12)
+            ax_inset.yaxis.tick_right()
+            ax_inset.spines["left"].set_visible(False)
+            ax_inset.spines["top"].set_visible(False)
+            ax_inset.tick_params(axis="y", which="both", left=False)
+            ax_inset.tick_params(axis="x", which="both", top=False)
+            ax.set_title("")
+            # Labels
+            # set off the y-axis labels
+            if i == 0:
+                ax.set_title(f"{dataset}", fontsize=22)
+            if j == 0:
+                ax.set_ylabel(f"{metric}", fontsize=22)
+                ylim = ax.get_ylim()
+                y_ticks = np.linspace(ylim[0], ylim[1], 4)
+                ax.set_yticks(y_ticks)
+                ax.set_yticklabels([f"{y:.2f}" for y in y_ticks], fontsize=14)
+            else:
+                ax.set_ylabel("")
+                ax.get_yaxis().set_visible(False)
+
+            ax.set_xlabel("")
+            if i == n_rows - 1:
+                xlim = ax.get_xlim()
+                xmin, xmax = xlim
+                x_ticks = [round(xmin, 2), 0, round(xmax, 2)]
+                ax.set_xticks(x_ticks)
+                ax.set_xticklabels([f"{x:.2f}" for x in x_ticks], fontsize=14)
+            else:
+                ax.get_xaxis().set_visible(False)
+
+
+    plt.tight_layout(pad=.1, h_pad=0.1, w_pad=0.1)
+    plt.savefig(save_path, dpi=300)
+    plt.close()
+
+
+# Function to calculate skewness and Bowley’s skewness
+def calculate_symmetry_metrics(diff_df, datasets, metrics):
+    symmetry_results = []
+    for dataset in datasets:
+        for metric in metrics:
+            diffs = diff_df[(diff_df["Dataset"] == dataset) & (diff_df["Metric"] == metric)]["Difference"].values
+            # skewness = stats.skew(diffs)
+            skewness = median_skewness(diffs)
+            q1, q2, q3 = np.percentile(diffs, [25, 50, 75])
+            bowley = (q3 + q1 - 2 * q2) / (q3 - q1) if (q3 - q1) != 0 else np.nan
+            symmetry_results.append({
+                "Dataset": dataset,
+                "Metric": metric,
+                "Skewness": skewness,
+                "Bowley_Skewness": bowley
+            })
+    return pd.DataFrame(symmetry_results)
+
+
+def check_symmetry_holds(symmetry_df, skewness_threshold, bowley_threshold):
+    # Filter tests where both skewness and Bowley's are within bounds
+    symmetric_tests = symmetry_df[
+        (symmetry_df["Skewness"].abs() <= skewness_threshold) &
+        (symmetry_df["Bowley_Skewness"].abs() <= bowley_threshold)
+        ]
+
+    # Total tests
+    total_tests = len(symmetry_df)
+    symmetric_count = len(symmetric_tests)
+
+    # Print summary
+    print(f"Total tests: {total_tests}")
+    print(
+        f"Tests satisfying symmetry assumption (|Skewness| <= {skewness_threshold}, |Bowley| <= {bowley_threshold}): {symmetric_count}")
+
+    # Print symmetric test names in Metric-Dataset format
+    print("\nSymmetric Tests (Metric-Dataset):")
+    for index, row in symmetric_tests.iterrows():
+        test_name = f"{row['Metric']}-{row['Dataset']}"
+        print(f"{test_name} (Skewness: {row['Skewness']:.3f}, Bowley: {row['Bowley_Skewness']:.3f})")
+
+    # Print failing tests (if any)
+    asymmetric_tests = symmetry_df[
+        ~((symmetry_df["Skewness"].abs() <= skewness_threshold) &
+          (symmetry_df["Bowley_Skewness"].abs() <= bowley_threshold))
+    ]
+    if not asymmetric_tests.empty:
+        print("\nTests failing symmetry assumption (Metric-Dataset):")
+        for index, row in asymmetric_tests.iterrows():
+            test_name = f"{row['Metric']}-{row['Dataset']}"
+            print(f"{test_name} (Skewness: {row['Skewness']:.3f}, Bowley: {row['Bowley_Skewness']:.3f})")
+    symmetric_tests.to_csv("symmetric_tests.csv", index=False)
+    asymmetric_tests.to_csv("asymmetric_tests.csv", index=False)
+
+def median_skewness(diffs):
+    median = np.median(diffs)
+    n = len(diffs)
+    mean_dev = diffs - median
+    skewness_median = (np.mean(mean_dev**3)) / (np.mean(mean_dev**2)**1.5)
+    return skewness_median
+
+def check_symmetry_by_skewness(symmetry_df, skewness_threshold):
+    # Filter tests where skewness is within bounds
+    symmetric_tests = symmetry_df[
+        (symmetry_df["Skewness"].abs() <= skewness_threshold)
+    ]
+
+    # Total tests
+    total_tests = len(symmetry_df)
+    symmetric_count = len(symmetric_tests)
+
+    # Print summary
+    print(f"Total tests: {total_tests}")
+    print(f"Tests satisfying symmetry assumption (|Skewness| <= {skewness_threshold}): {symmetric_count}")
+
+    # Print symmetric test names in Metric-Dataset format
+    print("\nSymmetric Tests (Metric-Dataset):")
+    for index, row in symmetric_tests.iterrows():
+        test_name = f"{row['Metric']}-{row['Dataset']}"
+        print(f"{test_name} (Skewness: {row['Skewness']:.3f}, Bowley: {row['Bowley_Skewness']:.3f})")
+
+    # Print failing tests
+    asymmetric_tests = symmetry_df[
+        (symmetry_df["Skewness"].abs() > skewness_threshold)
+    ]
+    if not asymmetric_tests.empty:
+        print("\nTests failing symmetry assumption (Metric-Dataset):")
+        for index, row in asymmetric_tests.iterrows():
+            test_name = f"{row['Metric']}-{row['Dataset']}"
+            print(f"{test_name} (Skewness: {row['Skewness']:.3f}, Bowley: {row['Bowley_Skewness']:.3f})")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("Plot lineplot for the metrics")
