@@ -893,7 +893,7 @@ def read_smpc_wilcoxon_benchmarks(data_dir, filename="benchmark_metrics.csv"):
     combined_df = pd.concat([fedscgen_smpc_df, scgen_df], ignore_index=True)
     return combined_df
 
-def validate_symmetry(df, ds_map):
+def validate_symmetry(df, ds_map, plot_dir):
     df_pivot = df.pivot(index=['Seed', 'Dataset'], columns='Approach')
     metrics = [c for c in df.columns if c not in ['Seed', 'Dataset', 'Approach']]
     df_diff = df_pivot.xs('FedscGen-SMPC', axis=1, level=1)[metrics] - df_pivot.xs('scGen', axis=1, level=1)[metrics]
@@ -908,10 +908,9 @@ def validate_symmetry(df, ds_map):
     metrics =  df.Metric.unique()
     seeds = df.Seed.unique()
     diff_df = df # compute_differences(df, datasets, metrics, seeds)
-    os.makedirs("qq_plots", exist_ok=True)
-    os.makedirs("histograms", exist_ok=True)
-    plot_all_distributions(diff_df, save_path="symmetry_grid.png")
+    plot_all_distributions(diff_df, save_path=f"{plot_dir}/symmetry_grid.png")
     symmetry_df = calculate_symmetry_metrics(diff_df, datasets, metrics)
+    symmetry_df.to_csv(f"{plot_dir}/symmetry_metrics.csv", index=False)
     # check_symmetry_holds(symmetry_df, skewness_threshold=0.5, bowley_threshold=0.3)
     check_symmetry_by_skewness(symmetry_df, skewness_threshold=1)
     return diff_df
