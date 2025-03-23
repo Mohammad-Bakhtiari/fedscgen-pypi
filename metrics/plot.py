@@ -752,13 +752,13 @@ def classification_error_bar_plot(data_dir):
     accuracy_diff_df.to_csv(os.path.join(data_dir, "accuracy_diff.csv"), index=False)
     plot_accuracy_diff(accuracy_diff_df, data_dir)
 
-def plot_smpc_wilcoxon_heatmap(data_dir, plot_name="smpc-wilcoxon.png"):
+def plot_smpc_wilcoxon_heatmap(data_dir, plot_name="smpc-wilcoxon-heatmap.png"):
     df = read_smpc_wilcoxon_benchmarks(data_dir)
-    diff_df = validate_symmetry(df, dict(zip(DATASETS, DATASETS_ACRONYM)))
+    diff_df = validate_symmetry(df, dict(zip(DATASETS, DATASETS_ACRONYM)), data_dir)
     datasets = df.Dataset.unique()
     corrected_p_values, avg_data = get_corrected_p_values(diff_df, datasets, diff_df.Seed.unique())
     avg_df = pd.DataFrame(avg_data, index=df.Dataset.unique(), columns=df.columns)
-    wilcoxon_diff_heatmap(df, avg_df, corrected_p_values, datasets, data_dir)
+    wilcoxon_diff_heatmap(df, avg_df, corrected_p_values, datasets, f"{data_dir}/{plot_name}")
     df.to_csv(os.path.join(data_dir, "smpc_wilcoxon.csv"), index=False)
 
 
@@ -804,7 +804,7 @@ def wilcoxon_diff_heatmap(df, avg_df, p_values, datasets, file_path):
             if stars:
                 ax.text(j + 0.5, i + 0.25, stars, fontsize=28, ha='center', va='bottom', color='black',
                         fontweight='bold')
-    plt.savefig(f"{file_path}/heatmap.png", dpi=300)
+    plt.savefig(file_path, dpi=300)
     plt.close()
 
 def get_corrected_p_values(df, datasets, seeds):
