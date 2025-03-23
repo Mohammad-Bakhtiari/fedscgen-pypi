@@ -797,7 +797,7 @@ def read_smpc_wilcoxon_benchmarks(data_dir, filename="benchmark_metrics.csv"):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("Plot lineplot for the metrics")
-    parser.add_argument('--scenario', type=str, choices=['datasets', 'tuning', 'batchout', 'kbet-diff', "smpc-wilcoxon"
+    parser.add_argument('--scenario', type=str, choices=['datasets', 'tuning', 'batchout', 'kbet-diff', "smpc-wilcoxon",
                                                          "scenarios", "classification", "lisi", "classification_error_bar"],
                         default='datasets')
     parser.add_argument('--data_dir', type=str, help='data directory')
