@@ -817,7 +817,7 @@ def get_corrected_p_values(df, datasets, seeds):
 
     # Optional: Sort by Dataset and Seed if needed
     df_wide = df_wide.sort_values(by=['Dataset', 'Seed']).reset_index(drop=True)
-    df = df_wide.copy()
+    df = df_wide.drop(columns=['Seed', 'Dataset'])
     num_datasets = len(datasets)
     num_metrics = len(df.columns)
     num_seeds = len(seeds)
