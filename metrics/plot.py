@@ -757,7 +757,7 @@ def plot_smpc_wilcoxon_heatmap(data_dir, plot_name="smpc-wilcoxon-heatmap.png"):
     diff_df = validate_symmetry(df, dict(zip(DATASETS, DATASETS_ACRONYM)), data_dir)
     datasets = df.Dataset.unique()
     corrected_p_values, avg_data = get_corrected_p_values(diff_df, datasets, diff_df.Seed.unique())
-    avg_df = pd.DataFrame(avg_data, index=diff_df.Dataset.unique(), columns=diff_df.columns)
+    avg_df = pd.DataFrame(avg_data, index=diff_df.Dataset.unique(), columns=diff_df.Metric.unique())
     wilcoxon_diff_heatmap(diff_df, avg_df, corrected_p_values, datasets, f"{data_dir}/{plot_name}")
     df.to_csv(os.path.join(data_dir, "smpc_wilcoxon.csv"), index=False)
 
