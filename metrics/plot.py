@@ -233,51 +233,6 @@ def acceptance_plot(df, plot_name):
     plt.close()
 
 
-def wilcoxon_bh_test(df):
-    corrected_p_values = []
-    pairs_of_approaches = []
-    k_values_list = []
-
-    # Get unique k-values from the dataframe
-    k_values = df['k_value'].unique()
-
-    # Iterate through each unique k-value
-    for k in k_values:
-        p_values = []
-
-        # Pairwise Wilcoxon tests
-        approaches = df['approach'].unique()
-        for i in range(len(approaches)):
-            for j in range(i + 1, len(approaches)):
-                group1 = df[(df['k_value'] == k) & (df['approach'] == approaches[i])]['acceptance_rate']
-                group2 = df[(df['k_value'] == k) & (df['approach'] == approaches[j])]['acceptance_rate']
-
-                # Check if all differences are zeros
-                diffs = group1.values - group2.values
-                if np.all(diffs == 0):
-                    p_values.append(1)  # No difference => p-value = 1
-                else:
-                    _, p_value = wilcoxon(group1, group2)
-                    p_values.append(p_value)
-
-                # Append to pairs_of_approaches and k_values_list for bookkeeping
-                pairs_of_approaches.append(f"{approaches[i]} vs {approaches[j]}")
-                k_values_list.append(k)
-
-        # Benjamini and Hochberg correction
-        reject, pvals_corrected, _, _ = multipletests(p_values, method='fdr_bh')
-        corrected_p_values.extend(pvals_corrected)
-
-    # Create a DataFrame to save results
-    results_df = pd.DataFrame({
-        'k_value': k_values_list,
-        'pairwise_comparison': pairs_of_approaches,
-        'corrected_p_value': corrected_p_values
-    })
-
-    return results_df
-
-
 def read_tuning_res(data_dir, read_all=False):
     if read_all:
         df = read_metrics_files(data_dir, filename="metrics.csv")
@@ -795,9 +750,54 @@ def classification_error_bar_plot(data_dir):
     accuracy_diff_df.to_csv(os.path.join(data_dir, "accuracy_diff.csv"), index=False)
     plot_accuracy_diff(accuracy_diff_df, data_dir)
 
+def plot_smpc_wilcoxon_heatmap(data_dir, plot_name="smpc-wilcoxon.png"):
+    df = read_smpc_wilcoxon_benchmarks(data_dir)
+    df.to_csv(os.path.join(data_dir, "smpc_wilcoxon.csv"), index=False)
+
+
+def read_smpc_wilcoxon_benchmarks(data_dir, filename="benchmark_metrics.csv"):
+    """
+    Parameters
+    ----------
+    data_dir: str
+        Assuming data_dir has two subfolders: "scgen" and "fedscgen-smpc"
+    Returns
+    -------
+    """
+    def read_benchmarks(approach):
+        fedscgenile_path = os.path.join(data_dir, approach, filename)
+        if os.path.exists(fedscgenile_path):
+            df = pd.read_csv(fedscgenile_path)
+        else:
+            raise FileNotFoundError(fedscgenile_path)
+        df = df[df.Batch.isna() & df.BatchOut.isna() & (df.Inclusion == "all") & (df.Dataset != "MouseBrain")]
+        df.drop(columns=["Inclusion", "Epoch", "Round", "Batch", "BatchOut", "N_Clients", "File"], inplace=True)
+        return df
+    fedscgen_smpc_df = read_benchmarks("fedscgen-smpc")
+    scgen_df = read_benchmarks("scgen")
+    def sanity_check(df, name):
+        print(f"\n--- Sanity check for {name} ---")
+        dataset_group_sizes = df.groupby(["Dataset", "Seed"]).size().unstack(fill_value=0)
+        valid_seeds = dataset_group_sizes.columns[
+            (dataset_group_sizes != 0).all(axis=0)
+        ].tolist()
+        print(f"Dropped seeds: {set(dataset_group_sizes.columns) - set(valid_seeds)}")
+        # Filter dataframe to keep only rows with shared seeds
+        df_filtered = df[df.Seed.isin(valid_seeds)].copy()
+        return df_filtered
+    fedscgen_smpc_df = sanity_check(fedscgen_smpc_df, "fedscgen-smpc")
+    scgen_df = sanity_check(scgen_df, "scgen")
+    sort_cols = ["Dataset", "Seed"]
+    fedscgen_smpc_df = fedscgen_smpc_df.sort_values(by=sort_cols).reset_index(drop=True)
+    scgen_df = scgen_df.sort_values(by=sort_cols).reset_index(drop=True)
+    assert fedscgen_smpc_df["Dataset"].equals(scgen_df["Dataset"]), "❌ Dataset values do not match!"
+    assert fedscgen_smpc_df["Seed"].equals(scgen_df["Seed"]), "❌ Seed values do not match!"
+    combined_df = pd.concat([fedscgen_smpc_df, scgen_df], ignore_index=True)
+    return combined_df
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("Plot lineplot for the metrics")
-    parser.add_argument('--scenario', type=str, choices=['datasets', 'tuning', 'batchout', 'kbet-diff',
+    parser.add_argument('--scenario', type=str, choices=['datasets', 'tuning', 'batchout', 'kbet-diff', "smpc-wilcoxon"
                                                          "scenarios", "classification", "lisi", "classification_error_bar"],
                         default='datasets')
     parser.add_argument('--data_dir', type=str, help='data directory')
@@ -829,3 +829,5 @@ if __name__ == '__main__':
         classification_error_bar_plot(args.data_dir)
     elif args.scenario == "lisi":
         read_lisi(args.data_dir)
+    elif args.scenario == "smpc-wilcoxon":
+        plot_smpc_wilcoxon_heatmap(args.data_dir)
