@@ -702,16 +702,18 @@ def get_classification_stats(data_dir):
             files_dir = os.path.join(data_dir, approach, dataset)
 
             if approach == "scGen":
-                files = glob.glob(f"{files_dir}/all/classification/classification_acc_*.csv")
+                files_path = f"{files_dir}/all/classification/classification_acc_*.csv"
+                files = glob.glob(files_path)
             elif approach == "FedscGen":
                 n_clients = n_clients_map.get(dataset, 2)
-                files = glob.glob(f"{files_dir}/all/BO0-C{n_clients}/classification/classification_acc_*.csv")
+                files_path = f"{files_dir}/all/BO0-C{n_clients}/classification/classification_acc_*.csv"
+                files = glob.glob(files_path)
             else:  # FedscGen-SMPC
-                files = glob.glob(f"{files_dir}/classification/classification_acc_*.csv")
+                files_path = f"{files_dir}/classification/classification_acc_*.csv"
+                files = glob.glob(files_path)
 
             if not files:
-                print(f"[WARNING] No files found for {approach} - {dataset}")
-                continue
+                raise FileNotFoundError(f"No classification accuracy files found for in {files_path}")
 
             for file in files:
                 try:
