@@ -637,38 +637,15 @@ def read_lisi(data_dir):
         plt.close()
 
 def plot_accuracy_diff(df, plot_dir):
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-
     # Melt the DataFrame to long format for the two difference columns
     df_long = df.melt(
         id_vars=['Dataset', 'Model'],
-        value_vars=['Accuracy Difference FedscGen - scGen', 'Accuracy Difference FedscGen-SMPC - scGen'],
+        value_vars=['FedscGen - scGen', 'FedscGen-SMPC - scGen'],
         var_name='Method',
         value_name='Accuracy Difference'
     )
-    # Create a combined column for the four combinations
-    df_long['Combination'] = df_long['Method'] + ' (' + df_long['Model'] + ')'
-    # Define the order of combinations for consistency
-    combination_order = [
-        'Accuracy Difference FedscGen - scGen (MLP)',
-        'Accuracy Difference FedscGen-SMPC - scGen (MLP)',
-        'Accuracy Difference FedscGen - scGen (KNN)',
-        'Accuracy Difference FedscGen-SMPC - scGen (KNN)'
-    ]
-    # Dictionary to rename legend values
-    legend_rename = {
-        'Accuracy Difference FedscGen - scGen (MLP)': 'MLP',
-        'Accuracy Difference FedscGen-SMPC - scGen (MLP)': 'MLP (SMPC)',
-        'Accuracy Difference FedscGen - scGen (KNN)': 'KNN',
-        'Accuracy Difference FedscGen-SMPC - scGen (KNN)': 'KNN (SMPC)'
-    }
-    # Rename the combinations using the dictionary
-    df_long['Combination'] = df_long['Combination'].map(legend_rename)
     df_long['Dataset'] = df_long['Dataset'].map(dict(zip(DATASETS, DATASETS_ACRONYM)))
     # Update combination_order with new names
-    combination_order = [legend_rename[combo] for combo in combination_order if combo in legend_rename]
-    # Set up the plot
     plt.figure(figsize=(15, 8))
     ax = sns.boxplot(
         x='Dataset',
@@ -676,7 +653,6 @@ def plot_accuracy_diff(df, plot_dir):
         hue='Combination',
         data=df_long,
         palette='Set2',
-        hue_order=combination_order
     )
     set_fontsize(ax, 'Accuracy Difference', 14, 12)
     # Customize the plot
@@ -755,11 +731,8 @@ def compute_accuracy_differences(df):
                 "Dataset": dataset,
                 "Model": "MLP",  # Hardcoded since model info is not included anymore
                 "Fold": fold,
-                "Accuracy scGen": acc_map['scGen'],
-                "Accuracy FedscGen": acc_map['FedscGen'],
-                "Accuracy FedscGen-SMPC": acc_map['FedscGen-SMPC'],
-                "Accuracy Difference FedscGen - scGen": acc_map['FedscGen'] - acc_map['scGen'],
-                "Accuracy Difference FedscGen-SMPC - scGen": acc_map['FedscGen-SMPC'] - acc_map['scGen']
+                "FedscGen - scGen": acc_map['FedscGen'] - acc_map['scGen'],
+                "FedscGen-SMPC - scGen": acc_map['FedscGen-SMPC'] - acc_map['scGen']
             })
 
     return pd.DataFrame(aligned_data)
