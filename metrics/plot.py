@@ -699,6 +699,8 @@ def get_classification_stats(data_dir):
 
     for approach in ["scGen", "FedscGen", "FedscGen-SMPC"]:
         for dataset in DATASETS:
+            if dataset == "MouseBrain":
+                continue
             files_dir = os.path.join(data_dir, approach.lower(), dataset)
 
             if approach == "scGen":
