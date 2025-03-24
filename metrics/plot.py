@@ -699,7 +699,7 @@ def get_classification_stats(data_dir):
 
     for approach in ["scGen", "FedscGen", "FedscGen-SMPC"]:
         for dataset in DATASETS:
-            files_dir = os.path.join(data_dir, approach, dataset)
+            files_dir = os.path.join(data_dir, approach.lower(), dataset)
 
             if approach == "scGen":
                 files_path = f"{files_dir}/all/classification/classification_acc_*.csv"
