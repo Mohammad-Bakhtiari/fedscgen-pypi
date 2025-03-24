@@ -637,6 +637,9 @@ def read_lisi(data_dir):
         plt.close()
 
 def plot_accuracy_diff(df, plot_dir):
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
     # Melt the DataFrame to long format for the two difference columns
     df_long = df.melt(
         id_vars=['Dataset', 'Model'],
@@ -664,7 +667,7 @@ def plot_accuracy_diff(df, plot_dir):
     df_long['Combination'] = df_long['Combination'].map(legend_rename)
     df_long['Dataset'] = df_long['Dataset'].map(dict(zip(DATASETS, DATASETS_ACRONYM)))
     # Update combination_order with new names
-    combination_order = [legend_rename[combo] for combo in combination_order]
+    combination_order = [legend_rename[combo] for combo in combination_order if combo in legend_rename]
     # Set up the plot
     plt.figure(figsize=(15, 8))
     ax = sns.boxplot(
@@ -680,7 +683,6 @@ def plot_accuracy_diff(df, plot_dir):
     plt.title('Cell type classification accuracy difference of corrected data (Using FedscGen vs scGen)', fontsize=14)
     plt.xticks(rotation=45, ha='right')
     plt.axhline(0, color='gray', linestyle='--', linewidth=1)  # Add a reference line at 0
-
     plt.legend(title='', bbox_to_anchor=(1.05, 1), loc='upper left')
     # Adjust layout to prevent label cutoff
     plt.tight_layout()
@@ -688,69 +690,84 @@ def plot_accuracy_diff(df, plot_dir):
 
 
 def get_classification_stats(data_dir):
-    """Reads classification accuracy files, aligns runs, and computes statistics."""
-    results = {}
+    """Reads classification accuracy files, aligns runs, and computes statistics.
+
+    Returns a DataFrame with columns: Dataset, Model, Run, Approach, Accuracy, AUC
+    """
+    results = []
+    n_clients_map = {"HumanPancreas": 5, "CellLine": 3}
 
     for approach in ["scGen", "FedscGen", "FedscGen-SMPC"]:
         for dataset in DATASETS:
-            for model in ["mlp-norm", "knn"]:
-                if approach == "scGen":
-                    files = glob.glob(os.path.join(data_dir, "centralized", dataset, "all", "classification", model,
-                                                   "classification_acc_*.csv"))
-                else:
-                    n_clients = 5 if dataset == "HumanPancreas" else 3 if dataset == "CellLine" else 2
-                    if approach == "FedscGen":
-                        files = glob.glob(os.path.join(data_dir, "federated", dataset, "all", f"BO0-C{n_clients}",
-                                                   "classification", model, "classification_acc_*.csv"))
-                    else:
-                        files = glob.glob(os.path.join(data_dir, "federated", "smpc", dataset, "all", f"BO0-C{n_clients}",
-                                                   "classification", model, "classification_acc_*.csv"))
-                for file in files:
-                    file_number = int(file.split("_")[-1].split(".csv")[0])  # Extract {number} from filename
+            files_dir = os.path.join(data_dir, approach, dataset)
+
+            if approach == "scGen":
+                files = glob.glob(os.path.join(files_dir, "all", "classification", "classification_acc_*.csv"))
+            elif approach == "FedscGen":
+                n_clients = n_clients_map.get(dataset, 2)
+                files = glob.glob(
+                    os.path.join(files_dir, "all", f"BO0-C{n_clients}", "classification", "classification_acc_*.csv"))
+            else:  # FedscGen-SMPC
+                files = glob.glob(os.path.join(files_dir, "classification", "classification_acc_*.csv"))
+
+            if not files:
+                print(f"[WARNING] No files found for {approach} - {dataset}")
+                continue
+
+            for file in files:
+                try:
+                    fold = int(file.split("_")[-1].split(".csv")[0])  # Extract run number
                     df = pd.read_csv(file)
 
-                    # Get best epoch for this file
+                    # Get best epoch based on Accuracy
                     best_epoch = df.loc[df["Accuracy"].idxmax()]
                     max_acc = best_epoch["Accuracy"]
                     max_auc = best_epoch["AUC"]
 
-                    key = (dataset, model, file_number)  # Unique key for alignment
-                    if key not in results:
-                        results[key] = {}
+                    results.append({
+                        "Dataset": dataset,
+                        "Fold": fold,
+                        "Approach": approach,
+                        "Accuracy": max_acc,
+                        "AUC": max_auc
+                    })
 
-                    results[key][approach] = (max_acc, max_auc)  # Store best accuracy & AUC
+                except Exception as e:
+                    print(f"[ERROR] Failed to process {file}: {e}")
 
-    return results
+    return pd.DataFrame(results)
 
 
-def compute_accuracy_differences(results):
-    """Aligns classification stats and computes pairwise accuracy differences."""
+def compute_accuracy_differences(df):
+    """Aligns classification stats and computes pairwise accuracy differences from DataFrame."""
     aligned_data = []
 
-    for (dataset, model, file_number), values in results.items():
-        if "scGen" in values and "FedscGen" in values and "FedscGen-SMPC" in values:
-            acc_scGen, auc_scGen = values["scGen"]
-            acc_FedscGen, auc_FedscGen = values["FedscGen"]
-            acc_FedscGen_SMPC, auc_FedscGen_SMPC = values["FedscGen-SMPC"]
+    grouped = df.groupby(['Dataset', 'Fold'])
 
+    for (dataset, fold), group in grouped:
+        acc_map = {row['Approach']: row['Accuracy'] for _, row in group.iterrows()}
+
+        if all(approach in acc_map for approach in ['scGen', 'FedscGen', 'FedscGen-SMPC']):
             aligned_data.append({
                 "Dataset": dataset,
-                "Model": "MLP" if model == "mlp-norm" else model.upper(),
-                "File Number": file_number,
-                "Accuracy scGen": acc_scGen,
-                "Accuracy FedscGen": acc_FedscGen,
-                "Accuracy FedscGen-SMPC": acc_FedscGen_SMPC,
-                "Accuracy Difference FedscGen - scGen": acc_FedscGen - acc_scGen,
-                "Accuracy Difference FedscGen-SMPC - scGen": acc_FedscGen_SMPC - acc_scGen
+                "Model": "MLP",  # Hardcoded since model info is not included anymore
+                "Fold": fold,
+                "Accuracy scGen": acc_map['scGen'],
+                "Accuracy FedscGen": acc_map['FedscGen'],
+                "Accuracy FedscGen-SMPC": acc_map['FedscGen-SMPC'],
+                "Accuracy Difference FedscGen - scGen": acc_map['FedscGen'] - acc_map['scGen'],
+                "Accuracy Difference FedscGen-SMPC - scGen": acc_map['FedscGen-SMPC'] - acc_map['scGen']
             })
 
     return pd.DataFrame(aligned_data)
 
+
 def classification_error_bar_plot(data_dir):
-    results = get_classification_stats(data_dir)
-    accuracy_diff_df = compute_accuracy_differences(results)
+    df_stats = get_classification_stats(data_dir)
+    accuracy_diff_df = compute_accuracy_differences(df_stats)
     accuracy_diff_df.to_csv(os.path.join(data_dir, "accuracy_diff.csv"), index=False)
     plot_accuracy_diff(accuracy_diff_df, data_dir)
+
 
 def plot_smpc_wilcoxon_heatmap(data_dir, plot_name="smpc-wilcoxon-heatmap.png"):
     df = read_smpc_wilcoxon_benchmarks(data_dir)
