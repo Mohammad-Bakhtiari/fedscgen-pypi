@@ -19,12 +19,6 @@ fedscgen_smpc <- args[4]
 output_dir <- args[5]
 files <- c(raw=raw, scgen=scgen, fedscgen=fedscgen, "fedscgen-smpc"=fedscgen_smpc)
 
-for (file in files) {
-  if (!file.exists(file)) {
-    stop(paste("File", file, "does not exist."))
-  }
-}
-
 results_df <- data.frame()
 n_boot <- 10  # Adjust to 50 or 100 for more precision if desired
 for (name in names(files)) {
