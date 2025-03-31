@@ -32,13 +32,22 @@ for inclusion in "${INCLUSION_SCENARIOS[@]}"; do
     scgen="${root_dir}/results/scgen/${dataset}/${inclusion}/corrected.h5ad"
     fedscgen="${root_dir}/results/fedscgen/${dataset}/${inclusion}/BO0-C${n_clients}/fed_corrected.h5ad"
     fedscgen_smpc="${root_dir}/results/fedscgen-smpc/${dataset}/fed_corrected.h5ad"
+
     # Check file existence in a loop
-    for file in "$raw" "$scgen" "$fedscgen" "$fedscgen_smpc"; do
+    for file in "$raw" "$scgen" "$fedscgen"; do
       if [[ ! -f "$file" ]]; then
         echo "ERROR: Missing file: $file"
         missing_files=1
       fi
     done
+
+    # Only check fedscgen_smpc if it's not empty
+    if [[ "$inclusion" == "all" && ! -f "$fedscgen_smpc" ]]; then
+      echo "ERROR: Missing file: $fedscgen_smpc"
+      missing_files=1
+    else
+      fedscgen_smpc="none"
+    fi
     output_dir="${root_dir}/results/fedscgen/${dataset}/${inclusion}/BO0-C${n_clients}"
     # Store command for later execution
     commands+=("Rscript lisi.R \"${raw}\" \"${scgen}\" \"${fedscgen}\" \"${fedscgen_smpc}\" \"${output_dir}\"")

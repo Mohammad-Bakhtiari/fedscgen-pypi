@@ -15,8 +15,11 @@ fedscgen_smpc <- args[4]
 output_dir= args[5]
 
 
-files <- c(raw=raw, scgen=scgen, fedscgen=fedscgen, fedscgen_smpc=fedscgen_smpc)
-#make files dictionary
+files <- c(raw = raw, scgen = scgen, fedscgen = fedscgen)
+
+if (fedscgen_smpc != "none") {
+  files <- c(files, fedscgen_smpc = fedscgen_smpc)
+}
 
 
 # Check if files exist in the directory
