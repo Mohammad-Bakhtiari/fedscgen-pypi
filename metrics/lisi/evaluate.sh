@@ -42,7 +42,7 @@ for inclusion in "${INCLUSION_SCENARIOS[@]}"; do
     done
 
     # Only check fedscgen_smpc if it's not empty
-    if [[ "$inclusion" == "all" && ! -f "$fedscgen_smpc" ]]; then
+    if [[ "$inclusion" == "all" && ! -f "$fedscgen_smpc" && "$dataset" != "MouseBrain" ]]; then
       echo "ERROR: Missing file: $fedscgen_smpc"
       missing_files=1
     else

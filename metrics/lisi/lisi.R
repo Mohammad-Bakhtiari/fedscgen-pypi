@@ -22,13 +22,6 @@ if (fedscgen_smpc != "none") {
 }
 
 
-# Check if files exist in the directory
-for(file in files) {
-  if(!file.exists(file)) {
-    stop(paste("File", file, "does not exist in the provided directory."))
-  }
-}
-
 # library(zellkonverter)
 library(anndata)
 library(Matrix)
