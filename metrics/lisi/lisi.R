@@ -1,3 +1,6 @@
+library(reticulate)
+use_condaenv("r_eval", required = TRUE)
+
 args <- commandArgs(trailingOnly = TRUE)
 
 # Ensure we have at least one argument (the directory)
