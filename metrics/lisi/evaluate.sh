@@ -1,58 +1,61 @@
 #!/bin/bash
 
+INCLUSION=$1
+
 parent_dir="$(dirname "$PWD")"
 root_dir="$(dirname "$parent_dir")"
-INCLUSION_SCENARIOS=("all" "dropped" "combined")
+script="lisi.R"
+if [[ "$INCLUSION" == "all" ]]; then
+  script="lisi_bootstrap.R"
+fi
 DATASETS=("CellLine" "PBMC" "HumanPancreas" "MouseRetina" "MouseBrain" "MouseHematopoieticStemProgenitorCells" "HumanDendriticCells" "MouseCellAtlas")
 
 # Array to store arguments for execution
 declare -a commands
 missing_files=0
 
-# Step 1: **Collect arguments and check if all required files exist**
-for inclusion in "${INCLUSION_SCENARIOS[@]}"; do
-  for dataset in "${DATASETS[@]}"; do
-    # Skip certain datasets based on conditions
-    if [[ ( "$dataset" == "HumanDendriticCells" || "$dataset" == "CellLine" ) && "$inclusion" != "all" ]]; then
-      continue
-    fi
+for dataset in "${DATASETS[@]}"; do
+  # Skip certain datasets based on conditions
+  if [[ ( "$dataset" == "HumanDendriticCells" || "$dataset" == "CellLine" ) && "$INCLUSION" != "all" ]]; then
+    continue
+  fi
 
-    n_clients=2
-    case "$dataset" in
-      "HumanPancreas")
-        n_clients=5
-        ;;
-      "CellLine")
-        n_clients=3
-        ;;
-    esac
+  n_clients=2
+  case "$dataset" in
+    "HumanPancreas")
+      n_clients=5
+      ;;
+    "CellLine")
+      n_clients=3
+      ;;
+  esac
 
 
-    raw="${root_dir}/data/datasets/${dataset}.h5ad"
-    scgen="${root_dir}/results/scgen/${dataset}/${inclusion}/corrected.h5ad"
-    fedscgen="${root_dir}/results/fedscgen/${dataset}/${inclusion}/BO0-C${n_clients}/fed_corrected.h5ad"
-    fedscgen_smpc="${root_dir}/results/fedscgen-smpc/${dataset}/fed_corrected.h5ad"
+  raw="${root_dir}/data/datasets/${dataset}.h5ad"
+  scgen="${root_dir}/results/scgen/${dataset}/${INCLUSION}/corrected.h5ad"
+  fedscgen="${root_dir}/results/fedscgen/${dataset}/${INCLUSION}/BO0-C${n_clients}/fed_corrected.h5ad"
+  fedscgen_smpc="${root_dir}/results/fedscgen-smpc/${dataset}/fed_corrected.h5ad"
 
-    # Check file existence in a loop
-    for file in "$raw" "$scgen" "$fedscgen"; do
-      if [[ ! -f "$file" ]]; then
-        echo "ERROR: Missing file: $file"
-        missing_files=1
-      fi
-    done
-
-    # Only check fedscgen_smpc if it's not empty
-    if [[ "$inclusion" == "all" && ! -f "$fedscgen_smpc" && "$dataset" != "MouseBrain" ]]; then
-      echo "ERROR: Missing file: $fedscgen_smpc"
+  # Check file existence in a loop
+  for file in "$raw" "$scgen" "$fedscgen"; do
+    if [[ ! -f "$file" ]]; then
+      echo "ERROR: Missing file: $file"
       missing_files=1
-    else
-      fedscgen_smpc="none"
     fi
-    output_dir="${root_dir}/results/fedscgen/${dataset}/${inclusion}/BO0-C${n_clients}"
-    # Store command for later execution
-    commands+=("Rscript lisi.R \"${raw}\" \"${scgen}\" \"${fedscgen}\" \"${fedscgen_smpc}\" \"${output_dir}\"")
   done
+
+  # Only check fedscgen_smpc if it's not empty
+  if [[ "$INCLUSION" == "all" && ! -f "$fedscgen_smpc" && "$dataset" != "MouseBrain" ]]; then
+    echo "ERROR: Missing file: $fedscgen_smpc"
+    missing_files=1
+  else
+    fedscgen_smpc="none"
+  fi
+  output_dir="${root_dir}/results/fedscgen/${dataset}/${INCLUSION}/BO0-C${n_clients}"
+  # Store command for later execution
+  commands+=("Rscript ${script} \"${raw}\" \"${scgen}\" \"${fedscgen}\" \"${fedscgen_smpc}\" \"${output_dir}\"")
 done
+
 
 # If any file is missing, exit before execution
 if [[ $missing_files -eq 1 ]]; then
