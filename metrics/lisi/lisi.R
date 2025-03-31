@@ -11,10 +11,11 @@ set.seed(42)
 raw <- args[1]
 scgen <- args[2]
 fedscgen <- args[3]
-output_dir= args[4]
+fedscgen_smpc <- args[4]
+output_dir= args[5]
 
 
-files <- c(raw=raw, scgen=scgen, fedscgen=fedscgen)
+files <- c(raw=raw, scgen=scgen, fedscgen=fedscgen, fedscgen_smpc=fedscgen_smpc)
 #make files dictionary
 
 

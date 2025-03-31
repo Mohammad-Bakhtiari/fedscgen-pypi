@@ -27,27 +27,21 @@ for inclusion in "${INCLUSION_SCENARIOS[@]}"; do
         ;;
     esac
 
-    output_dir="${root_dir}/results/fedscgen/${dataset}/${inclusion}/BO0-C${n_clients}"
+
     raw="${root_dir}/data/datasets/${dataset}.h5ad"
     scgen="${root_dir}/results/scgen/${dataset}/${inclusion}/corrected.h5ad"
     fedscgen="${root_dir}/results/fedscgen/${dataset}/${inclusion}/BO0-C${n_clients}/fed_corrected.h5ad"
-
-    # Check file existence
-    if [[ ! -f "$raw" ]]; then
-      echo "ERROR: Missing raw data file: $raw"
-      missing_files=1
-    fi
-    if [[ ! -f "$scgen" ]]; then
-      echo "ERROR: Missing scGen corrected file: $scgen"
-      missing_files=1
-    fi
-    if [[ ! -f "$fedscgen" ]]; then
-      echo "ERROR: Missing FedscGen corrected file: $fedscgen"
-      missing_files=1
-    fi
-
+    fedscgen_smpc="${root_dir}/results/fedscgen-smpc/${dataset}/fed_corrected.h5ad"
+    # Check file existence in a loop
+    for file in "$raw" "$scgen" "$fedscgen" "$fedscgen_smpc"; do
+      if [[ ! -f "$file" ]]; then
+        echo "ERROR: Missing file: $file"
+        missing_files=1
+      fi
+    done
+    output_dir="${root_dir}/results/fedscgen/${dataset}/${inclusion}/BO0-C${n_clients}"
     # Store command for later execution
-    commands+=("Rscript lisi.R \"${raw}\" \"${scgen}\" \"${fedscgen}\" \"${output_dir}\"")
+    commands+=("Rscript lisi.R \"${raw}\" \"${scgen}\" \"${fedscgen}\" \"${fedscgen_smpc}\" \"${output_dir}\"")
   done
 done
 
