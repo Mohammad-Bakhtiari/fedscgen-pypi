@@ -45,10 +45,11 @@ for dataset in "${DATASETS[@]}"; do
   done
 
   # Only check fedscgen_smpc if it's not empty
-  if [[ "$INCLUSION" == "all" && ! -f "$fedscgen_smpc" && "$dataset" != "MouseBrain" ]]; then
+  if [[ "$INCLUSION" == "all" && ! -f "$fedscgen_smpc" ]]; then
     echo "ERROR: Missing file: $fedscgen_smpc"
     missing_files=1
-  else
+  fi
+  if [[ "$dataset" == "MouseBrain" ]]; then
     fedscgen_smpc="none"
   fi
   output_dir="${root_dir}/results/fedscgen/${dataset}/${INCLUSION}/BO0-C${n_clients}"
