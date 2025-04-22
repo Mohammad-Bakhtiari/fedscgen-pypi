@@ -10,7 +10,6 @@ from statsmodels.stats.multitest import multipletests
 import matplotlib.pyplot as plt
 import itertools
 import argparse
-from utils import DATASETS_COLORS, DATASETS_MARKERS, DATASETS_ACRONYM, DATASETS, APPROACH_MAP
 import glob
 import sys
 from pathlib import Path
@@ -22,7 +21,7 @@ parent_dir = str(Path(__file__).resolve().parent.parent)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-
+from utils import DATASETS_COLORS, DATASETS_MARKERS, DATASETS_ACRONYM, DATASETS, APPROACH_MAP
 
 def read_metrics_files(data_dir, filename="metrics.csv"):
     """ find all files named as `metrics.csv` in the data_dir and read them into a single dataframe
