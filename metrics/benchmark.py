@@ -16,42 +16,6 @@ from utils import (graph_connectivity_score, isolated_label_f1_score, ari_score,
                    compute_ils, knn_accuracy, DATASETS, bar_plot_subplot)
 
 
-def calc_obsm_pca(adata_file_paths, n_components=50, common_space=False):
-    adata_files = {}
-    if common_space:
-        pca = PCA(n_components=n_components, svd_solver='full')
-    for counter, (key, path) in enumerate(adata_file_paths.items()):
-        adata = anndata.read_h5ad(path)
-        if not common_space:
-            pca = PCA(n_components=n_components, svd_solver='full')
-            pca.fit(adata.X)
-        elif counter == 0:
-            pca.fit(adata.X)
-
-        adata.obsm[f'pca_{n_components}'] = pca.transform(adata.X)
-        adata_files[key] = adata
-
-    return adata_files
-
-
-def calculate_and_plot_metrics(adata_dict, batch_key, cell_key, plot_name, overwrite=False, n_components=50):
-    metric_file = plot_name.replace(".png", ".csv")
-    if os.path.exists(metric_file) and not overwrite:
-        df = pd.read_csv(metric_file, sep=',')
-    else:
-        all_metrics = []
-        for key, adata in adata_dict.items():
-            latent_adata = anndata.AnnData(adata.obsm[f'pca_{n_components}'])
-            latent_adata.obs = adata.obs
-            all_metrics.append(benchmark(adata, latent_adata, batch_key, cell_key, key))
-    plot_and_save(all_metrics, plot_name)
-    #     df = pd.DataFrame(all_metrics)
-    #     df.to_csv(metric_file, sep=",", index=False)
-    #     print(df)
-    # bar_plot(df, plot_name.replace(".", "-bar."))
-    # plot_metrics_with_circles(df, plot_name.replace(".", "-circle."))
-
-
 def benchmark(adata, latent_adata, batch_key, cell_key):
     nmi_value = nmi(latent_adata, cell_key)
     gc_value = graph_connectivity_score(latent_adata)
@@ -90,33 +54,6 @@ def tuning_metrics(adata, latent_adata, batch_key, cell_key, epoch, round, appro
         'ASW_C': asw_c
     }
     return common_metrics
-
-
-def benchmark_snapshots(data_dir, n_rounds, n_components, batch_key, cell_key):
-    """
-
-    Parameters
-    ----------
-    data_dir: str
-        Full path to the main data directory
-    n_rounds:
-        number of rounds
-
-    Returns
-    -------
-
-    """
-    all_metrics = []
-    for r in range(1, n_rounds + 1):
-        adata = anndata.read_h5ad(os.path.join(data_dir, f"FedScGen-C5-{r}.h5ad"))
-        latent_adata = anndata.AnnData(adata.obsm[f'pca_{n_components}'])
-        latent_adata.obs = adata.obs
-        all_metrics.append(benchmark(adata, latent_adata, batch_key, cell_key, str(r)))
-    adata = anndata.read_h5ad(os.path.join(data_dir, f"scgen.h5ad"))
-    latent_adata = anndata.AnnData(adata.obsm[f'pca_{n_components}'])
-    latent_adata.obs = adata.obs
-    all_metrics.append(benchmark(adata, latent_adata, batch_key, cell_key, "ScGen"))
-    plot_and_save(all_metrics, os.path.join(data_dir, "metrics.png"))
 
 
 def plot_and_save(all_metrics, plot_name):
@@ -217,24 +154,24 @@ def benchmark_all(data_dir: str, approach: str, n_components, batch_key, cell_ke
         results_df = pd.read_csv(output_file)
     else:
         results_df = pd.DataFrame(columns=["Seed",
-                                           "Epoch",
-                                           "Round",
-                                           "File",
-                                           "Inclusion",
-                                           "Dataset",
-                                           "Approach",
-                                           "BatchOut",
-                                             "Batch",
-                                                "N_Clients",
-                                             "NMI",
-                                                "GC",
-                                                "ILF1",
-                                           "ARI",
-                                             "EBM",
-                                                "KNN Acc",
-                                                "ASW_B",
-                                                "ASW_C"
-                                           ])
+                                            "Epoch",
+                                            "Round",
+                                            "File",
+                                            "Inclusion",
+                                            "Dataset",
+                                            "Approach",
+                                            "BatchOut",
+                                            "Batch",
+                                            "N_Clients",
+                                            "NMI",
+                                            "GC",
+                                            "ILF1",
+                                            "ARI",
+                                            "EBM",
+                                            "KNN Acc",
+                                            "ASW_B",
+                                            "ASW_C"
+                                            ])
     for ds_name in DATASETS:
         if ds_name in os.listdir(res_dir):
             df = find_all_corrected_files_path(os.path.join(res_dir, ds_name), approach)
@@ -252,31 +189,6 @@ def benchmark_all(data_dir: str, approach: str, n_components, batch_key, cell_ke
                 except Exception as e:
                     print(f"Error processing dataset: {ds_name}, file: {row['File']}, seed: {row['Seed']}. Error: {e}")
                     continue
-
-
-def benchmark_reproduce(fed_data_dir: str, cent_data_dir: str, inclusion: str, n_components: int, batch_key: str,
-                        cell_key: str):
-    all_metrics = []
-    ds_name = "MouseHematopoieticStemProgenitorCells"
-    inclusion = "all"
-    n_clients = 5 if ds_name == "HumanPancreas" else 3 if ds_name == "CellLine" else 2
-
-    def bench_model(path):
-        # adata = anndata.read_h5ad(path)
-        adata = calc_obsm_pca({'a': path}, 20)["a"]
-        latent_adata = anndata.AnnData(adata.obsm[f'pca_{n_components}'])
-        latent_adata.obs = adata.obs
-        metrics = benchmark(adata, latent_adata, batch_key, cell_key, "FedscGen")
-        return metrics
-
-    fed = bench_model(os.path.join(fed_data_dir, ds_name, inclusion, f"BO0-C2", "fed_corrected.h5ad"))
-    # fed = bench_model(os.path.join(fed_data_dir, ds_name, inclusion, f"BO0-C2", f"corrected_10.h5ad"))
-    scgen = bench_model(os.path.join(cent_data_dir, ds_name, inclusion, "corrected.h5ad"))
-    tun = bench_model(os.path.join(fed_data_dir, ds_name, inclusion, f"BO0-C2", f"corrected_10.h5ad"))
-    fed_diff = {k: fed[k] - scgen[k] for k in scgen.keys() if k != "Approach"}
-    tun_diff = {k: tun[k] - scgen[k] for k in scgen.keys() if k != "Approach"}
-    print(fed_diff)
-    print(tun_diff)
 
 
 def load_metrics_and_plot(df_path, plot_name):
@@ -297,29 +209,15 @@ if __name__ == "__main__":
     parser.add_argument("--inclusion", type=str, default="all", choices=["all", "combined", "dropped"])
     parser.add_argument('--cell_key', help='Cell key name.', default="cell_type")
     parser.add_argument('--batch_key', help='Batch key name.', default="batch")
-    parser.add_argument("--scenarios", type=str, default="all",
-                        choices=["approach", "tuning", "reproduce"])
+    parser.add_argument("--scenarios", type=str, default="all", choices=["approach", "tuning"])
     parser.add_argument("--approach", type=str, default="fedscgen", choices=["fedscgen", "scgen", "fedscgen-smpc"])
     parser.add_argument("--n_rounds", type=int, default=10, help="Number of rounds for snapshots")
     parser.add_argument("--n_batches", type=int, default=10, help="Number of batches for batch-out")
     parser.add_argument("--plot_only", action="store_true", default=False, help="Plot the metrics")
     args = parser.parse_args()
 
-    if args.plot_only:
-        if args.scenarios == "tuning":
-            df = pd.read_csv(os.path.join(args.data_dir, "metrics.csv"))
-            bar_plot_subplot(df, os.path.join(args.data_dir, "metrics.png"))
-        else:
-            load_metrics_and_plot(os.path.join(args.data_dir, "metrics.csv"),
-                                  os.path.join(args.data_dir, "metrics.png"))
-    else:
-        if args.scenarios == "approach":
-            benchmark_all(args.data_dir, args.approach, args.n_components, args.batch_key,
-                          args.cell_key)
-        elif args.scenarios == "tuning":
-            benchmark_all(args.data_dir, "fedscgen", args.n_components, args.batch_key, args.cell_key, tuning=True)
-        elif args.scenarios == "reproduce":
-            benchmark_reproduce(args.fed_data_dir, args.data_dir, args.inclusion, args.n_components, args.batch_key,
-                                args.cell_key)
-        else:
-            benchmark_snapshots(args.data_dir, args.n_rounds, args.n_components, args.batch_key, args.cell_key)
+    if args.scenarios == "approach":
+        benchmark_all(args.data_dir, args.approach, args.n_components, args.batch_key,
+                      args.cell_key)
+    elif args.scenarios == "tuning":
+        benchmark_all(args.data_dir, "fedscgen", args.n_components, args.batch_key, args.cell_key, tuning=True)
