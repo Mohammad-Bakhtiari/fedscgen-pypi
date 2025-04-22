@@ -101,58 +101,6 @@ def plot_metrics_with_heatmaps(df, metric_keys, plot_name):
     plt.savefig(plot_name, dpi=300)
 
 
-def plot_tuning_heatmap(dataset_keys, df, metric_keys, plot_name, scGen):
-    fig, axs = plt.subplots(len(metric_keys), len(dataset_keys),
-                            figsize=(len(dataset_keys) * 4, len(df['Epoch'].unique()) * 2),
-                            squeeze=True)
-    fig.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1, wspace=0.01, hspace=0.01)
-    # Ensure symmetric vmin and vmax for color normalization around zero
-    max_abs_value = max(abs(df[metric_keys].min().min()), abs(df[metric_keys].max().max()))
-    max_abs_value = 1
-    norm = colors.Normalize(vmin=-max_abs_value, vmax=max_abs_value)
-    cmap = cm.get_cmap('RdBu')
-    mappable = cm.ScalarMappable(norm=norm, cmap=cmap)
-    for j, dataset in enumerate(dataset_keys):
-        for i, metric in enumerate(metric_keys):
-            ax = axs[i][j]
-            data = df[df['Dataset'] == dataset]
-            scgen_ds_metric = scGen[scGen["Dataset"] == dataset][metric].values[0]
-            # Find the index of the maximum value
-            max_index = data[metric].idxmax()
-            best_epoch = data.loc[max_index, "Epoch"]
-            best_round = data.loc[max_index, "Round"]
-            data[metric] = data[metric].apply(lambda x: x - scgen_ds_metric)
-            max_value_diff = data.loc[max_index, metric]
-
-            pivot = data.pivot(index='Epoch', columns='Round', values=metric)
-            # abs_max = max(abs(pivot.min().min()), abs(pivot.max().max()))
-            abs_max = 1
-            cmap = 'RdBu'
-            sns.heatmap(pivot, ax=ax, cmap=cmap, cbar=False, center=0, vmin=-abs_max, vmax=abs_max, square=True)
-            ax.text(best_round - 0.5, best_epoch - 0.5, f"{max_value_diff:.2f}", ha='center', va='center', fontsize=12)
-
-            ax.set_xticklabels(ax.get_xticklabels(), fontsize=14)
-            ax.set_yticklabels(ax.get_yticklabels(), fontsize=14)
-            ax.grid(False)
-            if j == 0:
-                ax.text(-0.5, 0.38, metric, transform=ax.transAxes, fontsize=24, va='bottom', ha='left',
-                        rotation=90)
-                ax.set_ylabel("Epochs", fontsize=18)
-            else:
-                ax.set_ylabel('')
-                ax.yaxis.set_visible(False)
-            if i == 0:
-                ax.set_title(dataset, fontsize=18, loc='left')
-            if i < len(metric_keys) - 1:
-                ax.xaxis.set_visible(False)
-            else:
-                ax.set_xlabel("Rounds", fontsize=18)
-    # Adjust layout for colorbar and legend
-    plt.subplots_adjust(right=0.8)
-    cbar_ax = fig.add_axes([0.805, 0.28, 0.01, 0.5])
-    cbar = plt.colorbar(mappable, cax=cbar_ax)
-    cbar.ax.tick_params(labelsize=14)
-    plt.savefig(plot_name, dpi=300)
 
 
 def plot_bo_hitmap(df, plt_name, dpi, font_size=20, tick_size=14, cell_size=1, cbar_font_size=14, tick_label_size=26):
@@ -179,6 +127,52 @@ def plot_bo_hitmap(df, plt_name, dpi, font_size=20, tick_size=14, cell_size=1, c
     cbar.ax.tick_params(labelsize=26)
     plt.savefig(plt_name, dpi=dpi)
 
+
+
+
+def read_kbet_score(scores_path):
+    df = pd.read_csv(scores_path)
+    df["stats"] = df['Unnamed: 0']
+    df['acceptance_rate'] = 1 - df['kBET.observed']
+    df = df.groupby(["approach", "k_value"])["acceptance_rate"].median().reset_index()
+    return df
+
+
+def acceptance_plot(df, plot_name):
+    # k_values = df['k_values'].unique()
+
+    for approach, color in zip(["scGen", "FedscGen"], ['blue', 'red']):
+        subset = df[df["approach"] == approach]
+        plt.plot(subset['k_value'], subset['acceptance_rate'], label=approach, marker='o', color=color)
+
+    plt.xlabel('k-value')
+    plt.ylabel('Acceptance Rate')
+    plt.xticks(df.k_value.unique())
+    plt.legend()
+    plt.title('kBET Acceptance Rates across k-values')
+    plt.savefig(plot_name)
+    plt.close()
+
+
+def read_tuning_res(data_dir):
+    metric_keys = ["ARI", "NMI", "EBM", "ASW_B", "ASW_C", "KNN Acc"]
+    drop_columns = ["Approach", "Seed", "File", "Inclusion", "BatchOut", "Batch", "N_Clients", "ILF1", "GC"]
+    ds_map = dict(zip(DATASETS, DATASETS_ACRONYM))
+    df = pd.read_csv(os.path.join(data_dir,"fedscgen", "param-tuning", "benchmark_metrics.csv"))
+    plot_name = os.path.join(data_dir, "tuning-diff.png")
+    scGen = pd.read_csv(os.path.join(data_dir, "scgen", "benchmark_metrics.csv"))
+    scGen = scGen[scGen.Seed == 42]
+    scGen.drop(columns=drop_columns + ["Round", "Epoch"], inplace=True)
+    df.drop(columns=drop_columns, inplace=True)
+    df = df[~df.Epoch.isna()]
+    df.Epoch = df.Epoch.astype(int)
+    df.Round = df.Round.astype(int)
+    df.Dataset = df.Dataset.apply(lambda x: ds_map[x])
+    scGen.Dataset = scGen.Dataset.apply(lambda x: ds_map[x])
+    dataset_keys = df['Dataset'].unique().tolist()
+    find_best_round_epoch(dataset_keys, copy.deepcopy(df), metric_keys, scGen)
+
+    plot_tuning_heatmap(dataset_keys, df, metric_keys, plot_name, scGen)
 
 def find_best_round_epoch(dataset_keys, df, metric_keys, scGen):
     dfs = []
@@ -209,41 +203,59 @@ def find_best_round_epoch(dataset_keys, df, metric_keys, scGen):
     print((er[metric_keys] >= 0).sum())
     print((er[metric_keys] < 0).sum())
 
+def plot_tuning_heatmap(dataset_keys, df, metric_keys, plot_name, scGen):
+    fig, axs = plt.subplots(len(metric_keys), len(dataset_keys),
+                            figsize=(len(dataset_keys) * 4, len(df['Epoch'].unique()) * 2),
+                            squeeze=True)
+    fig.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1, wspace=0.01, hspace=0.01)
+    # Ensure symmetric vmin and vmax for color normalization around zero
+    max_abs_value = max(abs(df[metric_keys].min().min()), abs(df[metric_keys].max().max()))
+    max_abs_value = 1
+    norm = colors.Normalize(vmin=-max_abs_value, vmax=max_abs_value)
+    cmap = cm.get_cmap('RdBu')
+    mappable = cm.ScalarMappable(norm=norm, cmap=cmap)
+    for j, dataset in enumerate(dataset_keys):
+        for i, metric in enumerate(metric_keys):
+            ax = axs[i][j]
+            data = df[df['Dataset'] == dataset]
+            scgen_ds_metric = scGen[scGen["Dataset"] == dataset][metric].values[0]
+            # Find the index of the maximum value
+            max_index = data[metric].idxmax()
+            best_epoch = data.loc[max_index, "Epoch"]
+            best_round = data.loc[max_index, "Round"]
+            data[metric] = data[metric].apply(lambda x: x - scgen_ds_metric)
+            max_value_diff = data.loc[max_index, metric]
 
-def read_kbet_score(scores_path):
-    df = pd.read_csv(scores_path)
-    df["stats"] = df['Unnamed: 0']
-    df['acceptance_rate'] = 1 - df['kBET.observed']
-    df = df.groupby(["approach", "k_value"])["acceptance_rate"].median().reset_index()
-    return df
+            pivot = data.pivot(index='Epoch', columns='Round', values=metric)
+            pivot = pivot.sort_index()
+            pivot = pivot.sort_index(axis=1)
+            abs_max = 1
+            cmap = 'RdBu'
+            sns.heatmap(pivot, ax=ax, cmap=cmap, cbar=False, center=0, vmin=-abs_max, vmax=abs_max, square=True)
+            ax.text(best_round - 0.5, best_epoch - 0.5, f"{max_value_diff:.2f}", ha='center', va='center', fontsize=12)
 
-
-def acceptance_plot(df, plot_name):
-    # k_values = df['k_values'].unique()
-
-    for approach, color in zip(["scGen", "FedscGen"], ['blue', 'red']):
-        subset = df[df["approach"] == approach]
-        plt.plot(subset['k_value'], subset['acceptance_rate'], label=approach, marker='o', color=color)
-
-    plt.xlabel('k-value')
-    plt.ylabel('Acceptance Rate')
-    plt.xticks(df.k_value.unique())
-    plt.legend()
-    plt.title('kBET Acceptance Rates across k-values')
-    plt.savefig(plot_name)
-    plt.close()
-
-
-def read_tuning_res(data_dir):
-    df = pd.read_csv(os.path.join(data_dir, "benchmark_metrics.csv"))
-    metric_keys = ["ARI", "NMI", "EBM", "ASW_B", "ASW_C", "KNN Acc"]
-    plot_name = os.path.join(data_dir, "tuning-diff.png")
-    scGen = df[df["Approach"] == "scGen"]
-    df = df[df["Approach"] == "FedscGen"]
-    df.drop(columns=["Approach"], inplace=True)
-    dataset_keys = df['Dataset'].unique().tolist()
-    find_best_round_epoch(dataset_keys, copy.deepcopy(df), metric_keys, scGen)
-    plot_tuning_heatmap(dataset_keys, df, metric_keys, plot_name, scGen)
+            ax.set_xticklabels(ax.get_xticklabels(), fontsize=14)
+            ax.set_yticklabels(ax.get_yticklabels(), fontsize=14)
+            ax.grid(False)
+            if j == 0:
+                ax.text(-0.5, 0.38, metric, transform=ax.transAxes, fontsize=24, va='bottom', ha='left',
+                        rotation=90)
+                ax.set_ylabel("Epochs", fontsize=18)
+            else:
+                ax.set_ylabel('')
+                ax.yaxis.set_visible(False)
+            if i == 0:
+                ax.set_title(dataset, fontsize=18, loc='left')
+            if i < len(metric_keys) - 1:
+                ax.xaxis.set_visible(False)
+            else:
+                ax.set_xlabel("Rounds", fontsize=18)
+    # Adjust layout for colorbar and legend
+    plt.subplots_adjust(right=0.8)
+    cbar_ax = fig.add_axes([0.805, 0.28, 0.01, 0.5])
+    cbar = plt.colorbar(mappable, cax=cbar_ax)
+    cbar.ax.tick_params(labelsize=14)
+    plt.savefig(plot_name, dpi=300)
 
 
 def acceptance_diff_plot(df, plot_name):
