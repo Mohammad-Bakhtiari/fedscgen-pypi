@@ -66,6 +66,7 @@ DATASETS = ["HumanDendriticCells",
             "MouseHematopoieticStemProgenitorCells"
             ]
 DATASETS_ACRONYM = ["HDC", "MCA", "HP", "PBMC", "CL", "MR", "MB", "MHSPC"]
+DS_MAP = dict(zip(DATASETS, DATASETS_ACRONYM))
 APPROACH_MAP = {"raw": "Raw", "scgen": "scGen", "fedscgen": "FedscGen", "fedscgen_smpc": "FedscGen-SMPC", "fedscgen-smpc": "FedscGen-SMPC"}
 MODELS = ["Raw", "ScGen", "FedScGen"]
 MODEL_COLORS = {k: v for k, v in zip(MODELS, sns.color_palette("viridis", 3))}
