@@ -1,8 +1,12 @@
 # config.sh
 
-SEEDS=(42 123 456 789 101112 2024 31415 2718 1618 9999)
+#SEEDS=(42 123 456 789 101112 2024 31415 2718 1618 9999)
+#
+#DATASETS=(HumanDendriticCells MouseCellAtlas HumanPancreas PBMC CellLine MouseRetina MouseBrain MouseHematopoieticStemProgenitorCells)
 
-DATASETS=(HumanDendriticCells MouseCellAtlas HumanPancreas PBMC CellLine MouseRetina MouseBrain MouseHematopoieticStemProgenitorCells)
+SEEDS=(123)
+
+DATASETS=(MouseCellAtlas)
 
 DROPPED_DATASETS=(MouseCellAtlas HumanPancreas PBMC MouseRetina MouseBrain MouseHematopoieticStemProgenitorCells)
 
