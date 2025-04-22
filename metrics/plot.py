@@ -5,7 +5,7 @@ import matplotlib.colors as colors
 import pandas as pd
 import numpy as np
 import os
-from scipy.stats import wilcoxon
+from scipy.stats import mannwhitneyu
 from statsmodels.stats.multitest import multipletests
 import matplotlib.pyplot as plt
 import itertools
@@ -16,12 +16,14 @@ from pathlib import Path
 from scipy import stats
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
+from metrics.wilcoxon import avg_df
+
 # Add the parent directory to sys.path
 parent_dir = str(Path(__file__).resolve().parent.parent)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-from utils import DATASETS_COLORS, DATASETS_MARKERS, DATASETS_ACRONYM, DATASETS, APPROACH_MAP
+from utils import DATASETS_COLORS, DATASETS_MARKERS, DATASETS_ACRONYM, DATASETS, APPROACH_MAP, DS_MAP
 
 def read_metrics_files(data_dir, filename="metrics.csv"):
     """ find all files named as `metrics.csv` in the data_dir and read them into a single dataframe
@@ -157,7 +159,7 @@ def acceptance_plot(df, plot_name):
 def read_tuning_res(data_dir):
     metric_keys = ["ARI", "NMI", "EBM", "ASW_B", "ASW_C", "KNN Acc"]
     drop_columns = ["Approach", "Seed", "File", "Inclusion", "BatchOut", "Batch", "N_Clients", "ILF1", "GC"]
-    ds_map = dict(zip(DATASETS, DATASETS_ACRONYM))
+
     df = pd.read_csv(os.path.join(data_dir,"fedscgen", "param-tuning", "benchmark_metrics.csv"))
     plot_name = os.path.join(data_dir, "tuning-diff.png")
     scGen = pd.read_csv(os.path.join(data_dir, "scgen", "benchmark_metrics.csv"))
@@ -167,8 +169,8 @@ def read_tuning_res(data_dir):
     df = df[~df.Epoch.isna()]
     df.Epoch = df.Epoch.astype(int)
     df.Round = df.Round.astype(int)
-    df.Dataset = df.Dataset.apply(lambda x: ds_map[x])
-    scGen.Dataset = scGen.Dataset.apply(lambda x: ds_map[x])
+    df.Dataset = df.Dataset.apply(lambda x: DS_MAP[x])
+    scGen.Dataset = scGen.Dataset.apply(lambda x: DS_MAP[x])
     dataset_keys = df['Dataset'].unique().tolist()
     find_best_round_epoch(dataset_keys, copy.deepcopy(df), metric_keys, scGen)
 
@@ -805,108 +807,103 @@ def classification_error_bar_plot(data_dir):
     plot_accuracy_diff(accuracy_diff_df, data_dir)
 
 
-def plot_smpc_wilcoxon_heatmap(data_dir, plot_name="smpc-wilcoxon-heatmap.png"):
-    df = read_smpc_wilcoxon_benchmarks(data_dir)
-    diff_df = validate_symmetry(df, dict(zip(DATASETS, DATASETS_ACRONYM)), data_dir)
-    datasets = df.Dataset.unique()
-    corrected_p_values, avg_data = get_corrected_p_values(diff_df, datasets, diff_df.Seed.unique())
-    avg_df = pd.DataFrame(avg_data, index=diff_df.Dataset.unique(), columns=diff_df.Metric.unique())
-    wilcoxon_diff_heatmap(diff_df, avg_df, corrected_p_values, datasets, f"{data_dir}/{plot_name}")
-    df.to_csv(os.path.join(data_dir, "smpc_wilcoxon.csv"), index=False)
+def plot_smpc_wmw_heatmap(data_dir, plot_name="smpc-wmw.png", alpha=0.05):
+    df = read_benchmarks(data_dir)
+    df.to_csv(os.path.join(data_dir, "smpc_wmw_test.csv"), index=False)
+    avg_df, p_df, adj_p_dict, datasets, metrics = manwhitney_test(df, alpha)
+    wmw_heatmap(avg_df, p_df, alpha, plot_name)
+
+    # Report significant results
+    significant = (p_df < alpha).sum().sum()
+    print(f"Number of significant metric-dataset pairs: {significant}")
+    for dataset in datasets:
+        for metric in metrics:
+            adj_p = adj_p_dict[dataset][metric]
+            if not np.isnan(adj_p) and adj_p < alpha:
+                print(f"{dataset} - {metric}: Adjusted p-value = {adj_p:.4f}")
 
 
-def wilcoxon_diff_heatmap(df, avg_df, p_values, datasets, file_path):
-    metrics = df.columns
+def manwhitney_test(df, alpha=0.05):
+    metrics = ['NMI', 'GC', 'ILF1', 'ARI', 'EBM', 'KNN Acc', 'ASW_B', 'ASW_C']
+    df.Dataset = df.Dataset.apply(lambda x: DS_MAP[x])
+    datasets = df['Dataset'].unique()
+    avg_diff = {}
+    p_values = {}
+    for dataset in datasets:
+        p_values[dataset] = {}
+        avg_diff[dataset] = {}
+        df_dataset = df[df['Dataset'] == dataset]
+        for metric in metrics:
+            scgen_data = df_dataset[df_dataset['Approach'] == 'scGen'][metric].values
+            fedscgen_data = df_dataset[df_dataset['Approach'] == 'FedscGen-SMPC'][metric].values
+            if len(scgen_data) > 0 and len(fedscgen_data) > 0:
+                stat, p = mannwhitneyu(scgen_data, fedscgen_data, alternative='two-sided')
+                p_values[dataset][metric] = p
+                avg_diff[dataset][metric] = np.mean(fedscgen_data) - np.mean(scgen_data)
+            else:
+                raise ValueError(f"Missing data for {dataset} - {metric}. Ensure both approaches have data.")
+
+    flat_p_values = [p_values[d][m] for d in datasets for m in metrics if not np.isnan(p_values[d][m])]
+    rejected, adj_p_values, _, _ = multipletests(flat_p_values, alpha=alpha, method='fdr_bh')
+    adj_p_values = iter(adj_p_values)
+    adj_p_dict = {}
+    for dataset in datasets:
+        adj_p_dict[dataset] = {}
+        for metric in metrics:
+            if not np.isnan(p_values[dataset][metric]):
+                adj_p_dict[dataset][metric] = next(adj_p_values)
+            else:
+                raise ValueError(f"Missing data for {dataset} - {metric}")
+
+
+    p_df = pd.DataFrame(adj_p_dict).T
+    p_df.index.name = 'Dataset'
+    p_df.columns.name = 'Metric'
+    avg_df = pd.DataFrame(avg_diff).T
+    avg_df.index.name = 'Dataset'
+    avg_df.columns.name = 'Metric'
+    return avg_df, p_df, adj_p_dict, datasets, metrics
+
+def wmw_heatmap(avg_df, p_df, alpha, file_path):
+    datasets = avg_df.index
+    metrics = avg_df.columns
     annotations = avg_df.copy().astype(str)
 
     for i in range(len(datasets)):
         for j in range(len(metrics)):
-            annotations.iloc[i, j] = f"{avg_df.iloc[i, j]:.2f}"  # FIXED HERE
+            if not pd.isna(avg_df.iloc[i, j]):
+                annotations.iloc[i, j] = f"{avg_df.iloc[i, j]:.2f}"
+            else:
+                raise ValueError("NaN value found in avg_df")
 
-    # Create heatmap
-    fig, ax = plt.subplots(1,1,figsize=(16, 14), squeeze=True)
-    fig.subplots_adjust(left=0.15, right=0.9, top=0.9, bottom=0.15, wspace=0.01, hspace=0.01)
-    abs_max = 1  # Max range for colormap
-    sns.heatmap(avg_df, annot=annotations, fmt="", cmap='RdBu', center=0, ax=ax, cbar=False,
-                annot_kws={"size": 32}, square=True, vmin=-abs_max, vmax=abs_max)
-    # Set title and labels
-    ax.set_title("")
-    ax.grid(False)
-    ax.set_ylabel("")
-    ax.set_xlabel("")
-    ax.set_yticklabels(ax.get_yticklabels(), fontsize=30, rotation=0, ha='right')
-    ax.set_xticklabels(ax.get_xticklabels(), fontsize=30, rotation=45, ha='right')
-    # Add colorbar
-    norm = colors.Normalize(vmin=-abs_max, vmax=abs_max)
-    mappable = plt.cm.ScalarMappable(cmap='RdBu', norm=norm)
+    fig, ax = plt.subplots(figsize=(16, 14))
+    sns.heatmap(avg_df, annot=annotations, cmap='RdBu', center=0, ax=ax, cbar=False,
+                annot_kws={"size": 32}, square=True, fmt="", vmin=-1, vmax=1,)
+
+    ax.set_yticklabels(datasets, fontsize=30, rotation=0, ha='right')
+    ax.set_xticklabels(metrics, fontsize=30, rotation=45, ha='right')
+
     cbar_ax = fig.add_axes([0.81, 0.25, 0.02, 0.5])
-    cbar = plt.colorbar(mappable, cax=cbar_ax)
-    cbar.ax.tick_params(labelsize=24)
-    # Manually add stars above numbers
+    norm = colors.Normalize(vmin=-1, vmax=1)
+    sm = plt.cm.ScalarMappable(cmap='RdBu', norm=norm)
+    plt.colorbar(sm, cax=cbar_ax).ax.tick_params(labelsize=24)
+
     for i in range(len(datasets)):
         for j in range(len(metrics)):
-            p = p_values[i, j]
+            p = p_df.iloc[i, j]
             stars = ""
-            if p < 0.01:
-                stars = "***"
-            elif p < 0.05:
-                stars = "**"
-            elif p < 0.1:
-                stars = "*"
-
+            if not pd.isna(p):
+                if p < alpha:
+                    stars = "*"
             if stars:
-                ax.text(j + 0.5, i + 0.25, stars, fontsize=28, ha='center', va='bottom', color='black',
+                ax.text(j + 0.5, i + 0.3, stars, fontsize=28, ha='center', va='bottom', color='black',
                         fontweight='bold')
+
+    plt.tight_layout(rect=[0, 0, 0.8, 1])
     plt.savefig(file_path, dpi=300)
     plt.close()
 
-def get_corrected_p_values(df, datasets, seeds):
-    """
-    Computes Wilcoxon signed-rank test for each dataset-metric pair across all seeds.
-    Applies FDR correction for multiple testing.
-    """
-    df_wide = df.pivot(index=['Seed', 'Dataset'], columns='Metric', values='Difference')
-    df_wide.reset_index(inplace=True)
-
-    # Optional: Sort by Dataset and Seed if needed
-    df_wide = df_wide.sort_values(by=['Dataset', 'Seed']).reset_index(drop=True)
-    df = df_wide.drop(columns=['Seed', 'Dataset'])
-    num_datasets = len(datasets)
-    num_metrics = len(df.columns)
-    num_seeds = len(seeds)
-
-    # Reshape data to handle seeds explicitly
-    avg_data = np.zeros((num_datasets, num_metrics))  # Store mean performance differences
-    p_values = np.full((num_datasets, num_metrics), np.nan)  # Initialize with NaN
-
-    for i, dataset in enumerate(datasets):
-        start_idx = i * num_seeds
-        end_idx = (i + 1) * num_seeds
-        dataset_data = df.iloc[start_idx:end_idx]  # Extract data for this dataset
-
-        for j, metric in enumerate(df.columns):
-            metric_values = dataset_data[metric].values
-
-            if np.std(metric_values) > 0:  # Ensure variation exists
-                # Wilcoxon signed-rank test across all seeds for this dataset-metric pair
-                stat, p = wilcoxon(metric_values)
-                p_values[i, j] = p  # Store p-value
-
-            # Compute average performance difference
-            avg_data[i, j] = np.mean(metric_values)
-
-    # Multiple testing correction (FDR)
-    valid_p_values = p_values[~np.isnan(p_values)]  # Filter out NaNs
-    corrected_p = multipletests(valid_p_values, method='fdr_bh')[1]
-
-    # Store corrected p-values
-    p_values_corrected = np.full_like(p_values, np.nan)
-    p_values_corrected[~np.isnan(p_values)] = corrected_p
-
-    return p_values_corrected, avg_data
-
-
-def read_smpc_wilcoxon_benchmarks(data_dir, filename="benchmark_metrics.csv"):
+def read_benchmarks(data_dir, filename="benchmark_metrics.csv"):
     """
     Parameters
     ----------
@@ -915,7 +912,7 @@ def read_smpc_wilcoxon_benchmarks(data_dir, filename="benchmark_metrics.csv"):
     Returns
     -------
     """
-    def read_benchmarks(approach):
+    def read_approach_benchmarks(approach):
         file_path = os.path.join(data_dir, approach, filename)
         if os.path.exists(file_path):
             df = pd.read_csv(file_path)
@@ -924,8 +921,8 @@ def read_smpc_wilcoxon_benchmarks(data_dir, filename="benchmark_metrics.csv"):
         df = df[df.Batch.isna() & df.BatchOut.isna() & (df.Inclusion == "all") & (df.Dataset != "MouseBrain")]
         df.drop(columns=["Inclusion", "Epoch", "Round", "Batch", "BatchOut", "N_Clients", "File"], inplace=True)
         return df
-    fedscgen_smpc_df = read_benchmarks("fedscgen-smpc")
-    scgen_df = read_benchmarks("scgen")
+    fedscgen_smpc_df = read_approach_benchmarks("fedscgen-smpc")
+    scgen_df = read_approach_benchmarks("scgen")
     def sanity_check(df, name):
         print(f"\n--- Sanity check for {name} ---")
         dataset_group_sizes = df.groupby(["Dataset", "Seed"]).size().unstack(fill_value=0)
@@ -1144,7 +1141,7 @@ def check_symmetry_by_skewness(symmetry_df, skewness_threshold):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("Plot lineplot for the metrics")
-    parser.add_argument('--scenario', type=str, choices=['datasets', 'tuning', 'batchout', 'kbet-diff', "smpc-wilcoxon",
+    parser.add_argument('--scenario', type=str, choices=['datasets', 'tuning', 'batchout', 'kbet-diff', "wmw",
                                                          "scenarios", "classification", "lisi", "classification_error_bar"],
                         default='datasets')
     parser.add_argument('--data_dir', type=str, help='data directory')
@@ -1161,6 +1158,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.scenario == "tuning":
         read_tuning_res(args.data_dir)
+    elif args.scenario == "wmw":
+        plot_smpc_wmw_heatmap(args.data_dir)
     elif args.scenario == "kbet-diff":
         read_kbet(args.data_dir)
     elif args.scenario == "batchout":
@@ -1180,5 +1179,3 @@ if __name__ == '__main__':
         plot_lisi(args.data_dir)
         datasets = [ds for ds in DATASETS if ds != "MouseBrain"]
         collect_lisi_results(args.data_dir, ["all"], datasets)
-    elif args.scenario == "smpc-wilcoxon":
-        plot_smpc_wilcoxon_heatmap(args.data_dir)
