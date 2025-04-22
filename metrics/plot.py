@@ -311,7 +311,6 @@ def read_kbet_file(hp_kbet_file):
                                         values="acceptance_rate").reset_index()
     pivoted_df["difference"] = pivoted_df["FedscGen"] - pivoted_df["scGen"]
     kbet_diff = pivoted_df["difference"].mean().round(2)
-    print(type(kbet_diff))
     return kbet_diff
 
 
@@ -378,6 +377,7 @@ def read_scenarios_metrics(data_dir):
         df = get_scenario_metrics_diff(data_dir, inclusion)
         all_scenarios.append(df)
     df = pd.concat(all_scenarios, ignore_index=True)
+    df.kBET = df.kBET.astype(float)
     df.to_csv(os.path.join(data_dir, "datasets-metrics-scenarios.csv"))
     plot_scenarios_heatmap(df, data_dir)
 
@@ -390,10 +390,6 @@ def plot_scenarios_heatmap(df, data_dir):
     # Subplot: 3 rows, 2 columns
     fig, axs = plt.subplots(3, 2, figsize=(30, 18), squeeze=True)
     fig.subplots_adjust(left=0.09, right=0.92, top=0.99, bottom=0.08, wspace=0.01, hspace=0.01)
-
-    # Normalize heatmap color scaling
-    abs_max = max([abs(df.drop(columns=["Dataset", "inclusion"]).min().min()),
-                   abs(df.drop(columns=["Dataset", "inclusion"]).max().max())])
     abs_max = 1  # fixed color scale range
     norm = colors.Normalize(vmin=-abs_max, vmax=abs_max)
     cmap = cm.get_cmap('RdBu')
@@ -407,8 +403,6 @@ def plot_scenarios_heatmap(df, data_dir):
 
         subset = df[df["Dataset"] == dataset].set_index("inclusion")
         subset.drop(columns=["Dataset"], inplace=True)
-
-        print(subset.dtypes)
         sns.heatmap(
             subset,
             annot=True,
