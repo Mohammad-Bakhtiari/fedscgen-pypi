@@ -378,10 +378,10 @@ def read_scenarios_metrics(data_dir):
         all_scenarios.append(df)
     df = pd.concat(all_scenarios, ignore_index=True)
     df.to_csv(os.path.join(data_dir, "datasets-metrics-scenarios.csv"))
-    plot_scenarios_heatmap(df)
+    plot_scenarios_heatmap(df, data_dir)
 
 
-def plot_scenarios_heatmap(df):
+def plot_scenarios_heatmap(df, data_dir):
     if 'Unnamed: 0' in df.columns:
         df.drop(columns=['Unnamed: 0'], inplace=True)
     df["inclusion"] = df["inclusion"].apply(lambda x: x.capitalize())
