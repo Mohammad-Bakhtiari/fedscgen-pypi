@@ -10,7 +10,7 @@ from statsmodels.stats.multitest import multipletests
 import matplotlib.pyplot as plt
 import itertools
 import argparse
-from utils import DATASETS_COLORS, DATASETS_MARKERS, DATASETS_ACRONYM, DATASETS
+from utils import DATASETS_COLORS, DATASETS_MARKERS, DATASETS_ACRONYM, DATASETS, APPROACH_MAP
 import glob
 import sys
 from pathlib import Path
@@ -235,11 +235,8 @@ def acceptance_plot(df, plot_name):
     plt.close()
 
 
-def read_tuning_res(data_dir, read_all=False):
-    if read_all:
-        df = read_metrics_files(data_dir, filename="metrics.csv")
-        df.to_csv(os.path.join(data_dir, "all_metrics.csv"), index=False)
-    df = pd.read_csv(os.path.join(data_dir, "all_metrics.csv"))
+def read_tuning_res(data_dir):
+    df = pd.read_csv(os.path.join(data_dir, "benchmark_metrics.csv"))
     metric_keys = ["ARI", "NMI", "EBM", "ASW_B", "ASW_C", "KNN Acc"]
     plot_name = os.path.join(data_dir, "tuning-diff.png")
     scGen = df[df["Approach"] == "scGen"]
@@ -373,7 +370,7 @@ def read_scenarios_metrics(data_dir):
         df = get_scenario_metrics_diff(data_dir, inclusion, skip_datasets=["CellLine", "HumanDendriticCells"])
         all_scenarios.append(df)
     df = pd.concat(all_scenarios, ignore_index=True)
-    # df = pd.read_csv(os.path.join(data_dir, "datasets-metrics-scenarios.csv"))
+    df = pd.read_csv(os.path.join(data_dir, "datasets-metrics-scenarios.csv"))
     df["inclusion"] = df["inclusion"].apply(lambda x: x.capitalize())
     # subplot heatmap of each dataset for all metrics vs inclusion
     fig, axs = plt.subplots(2, 3, figsize=(30, 8), squeeze=True)
@@ -577,39 +574,92 @@ def set_fontsize(ax, y_label, font_size, tick_fontsize):
     ax.set_yticklabels(ax.get_yticklabels(), fontsize=tick_fontsize)
 
 
-def read_lisi(data_dir):
-    inclusions = ["all", "dropped", "combined"]
-    color_palette = sns.color_palette("viridis", 3)
-    for inclusion in inclusions:
+# def read_lisi(data_dir):
+#     inclusions = ["all", "dropped", "combined"]
+#     color_palette = sns.color_palette("viridis", 3)
+#     for inclusion in inclusions:
+# 
+#         # List to hold data from all datasets under a particular target folder.
+#         aggregated_data = []
+# 
+#         # Define hatch patterns for file_name
+#         hatch_patterns = ['/', '\\', '|']
+# 
+#         # Loop through each dataset and read its CSV.
+#         for ind, dataset in enumerate(DATASETS):
+#             if inclusion != "all" and dataset in ["CellLine", "HumanDendriticCells"]:
+#                 continue
+#             n_clients = 5 if dataset == "HumanPancreas" else 3 if dataset == "CellLine" else 2
+#             csv_path = os.path.join(data_dir, dataset, inclusion, f"BO0-C{n_clients}", 'lisi_results.csv')
+#             if os.path.exists(csv_path):
+#                 df = pd.read_csv(csv_path)
+#                 df.rename(columns={"file_name": "Approach"}, inplace=True)
+#                 df["Approach"] = df["Approach"].apply(
+#                     lambda x: "FedscGen" if x == "fedscgen" else "scGen" if x == "scgen" else "Raw")
+#                 df["Dataset"] = DATASETS_ACRONYM[ind]
+#                 aggregated_data.append(df)
+#             else:
+#                 raise FileNotFoundError(f"{csv_path} is not exist")
+# 
+#         # Concatenate all dataframes to get a single dataframe for the current target.
+#         aggregated_df = pd.concat(aggregated_data, ignore_index=True)
+#         # order the dataframe raw, scgen, fedscgen
+#         aggregated_df['Approach'] = pd.Categorical(aggregated_df['Approach'], categories=["Raw", "scGen", "FedscGen"],
+#                                                    ordered=True)
+#         # aggregated_df.sort_values(by="Dataset", inplace=True)
+#         plt.figure(figsize=(18, 6))
+#         approaches = aggregated_df["Approach"].unique()
+#         file_name_to_color = {file_name: color for file_name, color in zip(approaches, color_palette)}
+#         plt.subplot(1, 2, 1)
+#         ax1 = sns.boxplot(x='Dataset', y='batch', hue='Approach', data=aggregated_df,
+#                           palette=file_name_to_color)
+#         ax1.legend(fontsize=16)
+# 
+#         # Boxplot for 'cell_type'
+#         plt.subplot(1, 2, 2)
+#         ax2 = sns.boxplot(x='Dataset', y='cell_type', hue='Approach', data=aggregated_df,
+#                           palette=file_name_to_color)
+#         ax2.legend_.remove()
+#         set_fontsize(ax1, 'iLISI', font_size=22, tick_fontsize=20)
+#         set_fontsize(ax2, 'cLISI', font_size=22, tick_fontsize=20)
+#         # Add hatch patterns for models (file_name)
+#         for i, patches in enumerate(zip(ax1.artists, ax2.artists)):
+#             hatch = hatch_patterns[i % len(hatch_patterns)]
+#             patches[0].set_hatch(hatch)
+#             patches[1].set_hatch(hatch)
+# 
+#         # Adjust layout and save
+#         plt.tight_layout()
+#         plt.savefig(f'{data_dir}/lisi_{inclusion}.png', dpi=1000)
+#         plt.close()
 
-        # List to hold data from all datasets under a particular target folder.
+def collect_lisi_results(data_dir, inclusions, datasets):
+    for inclusion in inclusions:        
         aggregated_data = []
-
-        # Define hatch patterns for file_name
-        hatch_patterns = ['/', '\\', '|']
-
-        # Loop through each dataset and read its CSV.
-        for ind, dataset in enumerate(DATASETS):
-            if inclusion != "all" and dataset in ["CellLine", "HumanDendriticCells"]:
-                continue
+        for ind, dataset in enumerate(datasets):
             n_clients = 5 if dataset == "HumanPancreas" else 3 if dataset == "CellLine" else 2
             csv_path = os.path.join(data_dir, dataset, inclusion, f"BO0-C{n_clients}", 'lisi_results.csv')
             if os.path.exists(csv_path):
                 df = pd.read_csv(csv_path)
                 df.rename(columns={"file_name": "Approach"}, inplace=True)
-                df["Approach"] = df["Approach"].apply(
-                    lambda x: "FedscGen" if x == "fedscgen" else "scGen" if x == "scgen" else "Raw")
+                df["Approach"] = df["Approach"].apply(lambda x: APPROACH_MAP[x])
                 df["Dataset"] = DATASETS_ACRONYM[ind]
                 aggregated_data.append(df)
             else:
                 raise FileNotFoundError(f"{csv_path} is not exist")
-
         # Concatenate all dataframes to get a single dataframe for the current target.
         aggregated_df = pd.concat(aggregated_data, ignore_index=True)
-        # order the dataframe raw, scgen, fedscgen
-        aggregated_df['Approach'] = pd.Categorical(aggregated_df['Approach'], categories=["Raw", "scGen", "FedscGen"],
-                                                   ordered=True)
-        # aggregated_df.sort_values(by="Dataset", inplace=True)
+        categories = ["Raw", "scGen", "FedscGen"]
+        if inclusion == "all":
+            categories.append("FedscGen-SMPC")
+        aggregated_df['Approach'] = pd.Categorical(aggregated_df['Approach'], categories=categories, ordered=True)
+        aggregated_df.to_csv(f"{data_dir}/lisi_{inclusion}.csv", index=False)
+
+def plot_lisi(data_dir, inclusions=["dropped", "combined"]):
+    color_palette = sns.color_palette("viridis", 3)
+    for inclusion in inclusions:
+        aggregated_df = pd.read_csv(f"{data_dir}/lisi_{inclusion}.csv")
+        hatch_patterns = ['/', '\\', '|']
         plt.figure(figsize=(18, 6))
         approaches = aggregated_df["Approach"].unique()
         file_name_to_color = {file_name: color for file_name, color in zip(approaches, color_palette)}
@@ -636,34 +686,34 @@ def read_lisi(data_dir):
         plt.savefig(f'{data_dir}/lisi_{inclusion}.png', dpi=1000)
         plt.close()
 
-def plot_accuracy_diff(df, plot_dir):
-    # Melt the DataFrame to long format for the two difference columns
+
+def plot_accuracy_diff(df, plot_dir, datasets):
+    df['Dataset'] = df['Dataset'].map(dict(zip(DATASETS, DATASETS_ACRONYM)))
     df_long = df.melt(
-        id_vars=['Dataset', 'Model'],
+        id_vars=['Dataset', 'Fold'],
         value_vars=['FedscGen - scGen', 'FedscGen-SMPC - scGen'],
-        var_name='Method',
+        var_name='Combination',
         value_name='Accuracy Difference'
     )
-    df_long['Dataset'] = df_long['Dataset'].map(dict(zip(DATASETS, DATASETS_ACRONYM)))
-    # Update combination_order with new names
-    plt.figure(figsize=(15, 8))
+    plt.figure(figsize=(7, 6))
     ax = sns.boxplot(
         x='Dataset',
         y='Accuracy Difference',
         hue='Combination',
         data=df_long,
         palette='Set2',
+        width=0.6,  # Make boxes narrower
+        linewidth=0.8, # Reduce error bar width
+        dodge=True
     )
-    set_fontsize(ax, 'Accuracy Difference', 14, 12)
-    # Customize the plot
-    plt.title('Cell type classification accuracy difference of corrected data (Using FedscGen vs scGen)', fontsize=14)
-    plt.xticks(rotation=45, ha='right')
-    plt.axhline(0, color='gray', linestyle='--', linewidth=1)  # Add a reference line at 0
-    plt.legend(title='', bbox_to_anchor=(1.05, 1), loc='upper left')
-    # Adjust layout to prevent label cutoff
+    set_fontsize(ax, 'Accuracy Difference', 22, 18)
+    # Formatting
+    plt.axhline(0, color='gray', linestyle='--', linewidth=1)  # Reference line at 0
+    plt.title('')
+    plt.legend(title='', loc='upper left', fontsize=16, frameon=False, bbox_to_anchor=(-.2, 1.1), ncol=2)
+
     plt.tight_layout()
     plt.savefig(f'{plot_dir}/classification_accuracy_difference.png', dpi=300)
-
 
 def get_classification_stats(data_dir):
     """Reads classification accuracy files, aligns runs, and computes statistics.
@@ -729,7 +779,6 @@ def compute_accuracy_differences(df):
         if all(approach in acc_map for approach in ['scGen', 'FedscGen', 'FedscGen-SMPC']):
             aligned_data.append({
                 "Dataset": dataset,
-                "Model": "MLP",  # Hardcoded since model info is not included anymore
                 "Fold": fold,
                 "FedscGen - scGen": acc_map['FedscGen'] - acc_map['scGen'],
                 "FedscGen-SMPC - scGen": acc_map['FedscGen-SMPC'] - acc_map['scGen']
@@ -1100,7 +1149,7 @@ if __name__ == '__main__':
     parser.add_argument("--output_dir", type=str, help="Path to the output directory.")
     args = parser.parse_args()
     if args.scenario == "tuning":
-        read_tuning_res(args.data_dir, True)
+        read_tuning_res(args.data_dir)
     elif args.scenario == "kbet-diff":
         read_kbet(args.data_dir)
     elif args.scenario == "batchout":
@@ -1115,6 +1164,10 @@ if __name__ == '__main__':
     elif args.scenario == "classification_error_bar":
         classification_error_bar_plot(args.data_dir)
     elif args.scenario == "lisi":
-        read_lisi(args.data_dir)
+        datasets = [ds for ds in DATASETS if ds not in ["CellLine", "HumanDendriticCells"]]
+        collect_lisi_results(args.data_dir, ["dropped", "combined"], datasets)
+        plot_lisi(args.data_dir)
+        datasets = [ds for ds in DATASETS if ds != "MouseBrain"]
+        collect_lisi_results(args.data_dir, ["all"], datasets)
     elif args.scenario == "smpc-wilcoxon":
         plot_smpc_wilcoxon_heatmap(args.data_dir)
