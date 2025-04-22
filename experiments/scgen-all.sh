@@ -1,10 +1,9 @@
 #!/bin/bash
 
 AVAILABLE_GPUS="${1:-0,1,2,3}"
-SEEDS=(42 123 456 789 101112 2024 31415 2718 1618 9999)
-
+source ./config.sh
 declare -a TASK_QUEUE
-DATASETS=(HumanDendriticCells MouseCellAtlas HumanPancreas PBMC CellLine MouseRetina MouseBrain MouseHematopoieticStemProgenitorCells)
+
 for seed in "${SEEDS[@]}"
 do
   for dataset in "${DATASETS[@]}"
