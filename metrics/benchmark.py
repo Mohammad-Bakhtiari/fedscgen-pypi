@@ -148,7 +148,7 @@ def benchmark_all(data_dir: str, approach: str, n_components, batch_key, cell_ke
         assert approach in approaches.keys(), "Approach must be one of {}".format(approaches.keys())
         res_dir = os.path.join(data_dir, approach)
         approach = approaches[approach]
-    output_file = os.path.join(res_dir, f"benchmark_metrics_test.csv")
+    output_file = os.path.join(res_dir, f"benchmark_metrics.csv")
     file_exists = os.path.exists(output_file) and os.stat(output_file).st_size > 0
     if file_exists:
         results_df = pd.read_csv(output_file)
@@ -189,8 +189,7 @@ def benchmark_all(data_dir: str, approach: str, n_components, batch_key, cell_ke
                 except Exception as e:
                     print(f"Error processing dataset: {ds_name}, file: {row['File']}, seed: {row['Seed']}. Error: {e}")
                     continue
-                break
-        break
+
 
 def load_metrics_and_plot(df_path, plot_name):
     df = pd.read_csv(df_path)
