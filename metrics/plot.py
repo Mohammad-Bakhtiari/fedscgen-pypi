@@ -444,17 +444,14 @@ def plot_scenarios_heatmap(df, data_dir):
     plt.savefig(os.path.join(data_dir, "datasets-metrics-scenarios.png"), dpi=300)
     plt.close()
 
-def read_datasets_metrics(data_dir):
-    df = get_scenario_metrics_diff(data_dir, inclusion="all")
+def read_all_inc_plot_heatmap(data_dir):
+    df = get_scenario_metrics_diff(data_dir, inclusion="all", skip_datasets=[])
     df.to_csv(os.path.join(data_dir, "datasets-metrics-all.csv"), index=False)
     df = pd.read_csv(os.path.join(data_dir, "datasets-metrics-all.csv"))
     df.set_index("Dataset", inplace=True)
     df.drop(columns=["inclusion"], inplace=True)
     fig, axs = plt.subplots(1, 1, figsize=(16, 14), squeeze=True)
     fig.subplots_adjust(left=0.15, right=0.9, top=0.9, bottom=0.1, wspace=0.01, hspace=0.01)
-    abs_max = max([abs(df.min().min()),
-                   abs(df.max().max())]
-                  )
     abs_max = 1
     sns.heatmap(df, annot=True, cmap='RdBu', center=0, ax=axs, cbar=False, annot_kws={"size": 28}, square=True,
                 vmin=-abs_max, vmax=abs_max)
@@ -472,13 +469,13 @@ def read_datasets_metrics(data_dir):
     plt.savefig(os.path.join(data_dir, "datasets-metrics-all.png"), dpi=300)
 
 
-def get_scenario_metrics_diff(data_dir, inclusion):
+def get_scenario_metrics_diff(data_dir, inclusion, skip_datasets=["CL", "HDC"]):
     def read_approach_matrics(approach):
         df = pd.read_csv(os.path.join(data_dir, approach, "benchmark_metrics.csv"))
         df = df[(df.Seed == 42) & (df.Inclusion == inclusion) & (df.Batch.isna())]
         df.drop(columns=["Seed", "File", "Inclusion", "N_Clients", "Epoch", "Round", "Approach", "Batch", "BatchOut"], inplace=True)
         df.Dataset = df.Dataset.apply(lambda x: DS_MAP[x])
-        df = df[~df.Dataset.isin(["CL", "HDC"])]
+        df = df[~df.Dataset.isin(skip_datasets)]
         df.set_index("Dataset", inplace=True)
         return df
 
@@ -1173,12 +1170,12 @@ if __name__ == '__main__':
         plot_smpc_wmw_heatmap(args.data_dir)
     elif args.scenario == "batchout":
         read_plot_batchout(args.data_dir)
-    elif args.scenario == "kbet-diff":
-        read_kbet(args.data_dir)
     elif args.scenario == "scenarios":
         read_scenarios_metrics(args.data_dir)
     elif args.scenario == "datasets":
-        read_datasets_metrics(args.data_dir)
+        read_all_inc_plot_heatmap(args.data_dir)
+    elif args.scenario == "kbet-diff":
+        read_kbet(args.data_dir)
     elif args.scenario == "classification":
         read_classification(args.data_dir)
     elif args.scenario == "classification_error_bar":
