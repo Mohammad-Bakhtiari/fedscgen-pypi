@@ -16,8 +16,6 @@ from pathlib import Path
 from scipy import stats
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
-from metrics.wilcoxon import avg_df
-
 # Add the parent directory to sys.path
 parent_dir = str(Path(__file__).resolve().parent.parent)
 if parent_dir not in sys.path:
