@@ -491,9 +491,10 @@ def get_scenario_metrics_diff(data_dir, inclusion):
     metrics_df = fedscgen.subtract(scgen).round(2)
     metrics_df["kBET"] = None
     for dataset, acr in zip(DATASETS, DATASETS_ACRONYM):
-        n_clients = 5 if dataset == "HumanPancreas" else 3 if dataset == "CellLine" else 2
-        kbet_file = os.path.join(data_dir,"fedscgen", dataset, inclusion, f"BO0-C{n_clients}", "kBET_summary_results.csv")
-        metrics_df.loc[metrics_df.index == acr, "kBET"] = read_kbet_file(kbet_file)
+        if acr in metrics_df.index:
+            n_clients = 5 if dataset == "HumanPancreas" else 3 if dataset == "CellLine" else 2
+            kbet_file = os.path.join(data_dir,"fedscgen", dataset, inclusion, f"BO0-C{n_clients}", "kBET_summary_results.csv")
+            metrics_df.loc[metrics_df.index == acr, "kBET"] = read_kbet_file(kbet_file)
 
     metrics_df["inclusion"] = inclusion
     metrics_df.reset_index(inplace=True)
