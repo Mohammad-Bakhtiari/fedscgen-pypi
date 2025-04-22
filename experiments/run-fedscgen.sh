@@ -1,18 +1,7 @@
 #!/bin/bash
 AVAILABLE_GPUS="${1:-0,1,2,3}"
-
+source ./config.sh
 declare -a TASK_QUEUE
-
-
-DATASETS=(HumanDendriticCells MouseCellAtlas HumanPancreas PBMC CellLine MouseRetina MouseBrain MouseHematopoieticStemProgenitorCells)
-DROPPED_CELLTYPES=( ""
- "Epithelial,Dendritic,Smooth-muscle,NK"
-  "stellate,endothelial,mesenchymal,macrophage,mast,epsilon,schwann,t_cell,MHC class II"
-   "Plasmacytoid dendritic cell,Megakaryocyte,Hematopoietic stem cell"
-   ""
-   "ganglion,vascular_endothelium,horizontal,fibroblasts,microglia,pericytes,astrocytes"
-   "Olfactory ensheathing cells,Choroid_plexus,Mitotic"
-   "MPP,LTHSC,LMPP,Unsorted")
 
 
 for index in "${!DATASETS[@]}"
@@ -45,7 +34,7 @@ do
     dropped=$([ "$inclusion" == "dropped" ] && echo true || echo false)
     dropped_celltypes=''
     if [ "$inclusion" != "all" ]; then
-      dropped_celltypes="${DROPPED_CELLTYPES[$index]:-''}"
+      dropped_celltypes="${CELLTYPES[$index]:-''}"
     fi
     task_name="${dataset}-${inclusion}"
     task="$task_name|${dataset}.h5ad|${dropped_celltypes}|$combined|$dropped|$batch_out|$n_clients|$batches|_GPU_"
