@@ -311,6 +311,7 @@ def read_kbet_file(hp_kbet_file):
                                         values="acceptance_rate").reset_index()
     pivoted_df["difference"] = pivoted_df["FedscGen"] - pivoted_df["scGen"]
     kbet_diff = pivoted_df["difference"].mean().round(2)
+    print(type(kbet_diff))
     return kbet_diff
 
 
