@@ -314,7 +314,7 @@ def read_kbet_file(hp_kbet_file):
     return kbet_diff
 
 
-def read_batchout(data_dir):
+def read_plot_batchout(data_dir):
     def read_metrics(data_dir, approach):
         drop_columns = ["Approach", "Dataset", "Seed", "File", "Inclusion", "N_Clients", "Epoch", "Round", "BatchOut", "index"]
         df = pd.read_csv(os.path.join(data_dir, approach, "benchmark_metrics.csv"))
@@ -340,17 +340,12 @@ def get_bo_kbet_diff(bo_kbet_dir, diff_df):
         diff_df.loc[diff_df.index == bo + 1, "kBET"] = read_kbet_file(file_path)
     return diff_df
 
-
-
 def get_hp_metrics_kbet_diff(scgen, fedscgen, data_dir):
     diff = fedscgen.subtract(scgen).round(2)
     diff["kBET"] = None
     kbet_value_diff = read_kbet_file(f"{data_dir}/fedscgen/HumanPancreas/all/BO0-C5/kBET_summary_results.csv")
     diff.loc[diff.index == 0, "kBET"] = kbet_value_diff
     return diff
-
-def get_hp_diff(res_dir):
-    pass
 
 def read_kbet(data_dir):
     for inclusion in ["all", "combined", "dropped"]:
@@ -1160,8 +1155,7 @@ if __name__ == '__main__':
     elif args.scenario == "wmw":
         plot_smpc_wmw_heatmap(args.data_dir)
     elif args.scenario == "batchout":
-        read_batchout(args.bo_metrics_file, args.hp_kbet_file, args.bo_kbet_dir, args.all_ds_metrics_file,
-                      args.output_dir)
+        read_plot_batchout(args.data_dir)
     elif args.scenario == "kbet-diff":
         read_kbet(args.data_dir)
     elif args.scenario == "scenarios":
