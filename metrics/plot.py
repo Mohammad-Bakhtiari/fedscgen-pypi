@@ -5,6 +5,8 @@ import matplotlib.colors as colors
 import pandas as pd
 import numpy as np
 import os
+
+from matplotlib.testing.jpl_units import Epoch
 from scipy.stats import mannwhitneyu
 from statsmodels.stats.multitest import multipletests
 import matplotlib.pyplot as plt
@@ -103,8 +105,10 @@ def plot_metrics_with_heatmaps(df, metric_keys, plot_name):
 
 
 
-def plot_bo_hitmap(df, plt_name, dpi, font_size=20, tick_size=14, cell_size=1, cbar_font_size=14, tick_label_size=26):
+def plot_bo_hitmap(df, plt_name, dpi, tick_size=14, cell_size=1):
     # Determine the figure size based on the number of columns and rows
+    if "Batch" in df.columns:
+        df.drop(columns=["Batch"], inplace=True)
     num_cols, num_rows = df.shape
     fig_width = cell_size * num_rows
     fig_height = cell_size * num_cols
@@ -154,6 +158,8 @@ def acceptance_plot(df, plot_name):
     plt.close()
 
 
+
+
 def read_tuning_res(data_dir):
     metric_keys = ["ARI", "NMI", "EBM", "ASW_B", "ASW_C", "KNN Acc"]
     drop_columns = ["Approach", "Seed", "File", "Inclusion", "BatchOut", "Batch", "N_Clients", "ILF1", "GC"]
@@ -161,7 +167,7 @@ def read_tuning_res(data_dir):
     df = pd.read_csv(os.path.join(data_dir,"fedscgen", "param-tuning", "benchmark_metrics.csv"))
     plot_name = os.path.join(data_dir, "tuning-diff.png")
     scGen = pd.read_csv(os.path.join(data_dir, "scgen", "benchmark_metrics.csv"))
-    scGen = scGen[scGen.Seed == 42]
+    scGen = scGen[(scGen.Seed == 42) & (scGen.Inclusion == "all") & (scGen.BatchOut.isna())]
     scGen.drop(columns=drop_columns + ["Round", "Epoch"], inplace=True)
     df.drop(columns=drop_columns, inplace=True)
     df = df[~df.Epoch.isna()]
@@ -173,6 +179,7 @@ def read_tuning_res(data_dir):
     find_best_round_epoch(dataset_keys, copy.deepcopy(df), metric_keys, scGen)
 
     plot_tuning_heatmap(dataset_keys, df, metric_keys, plot_name, scGen)
+
 
 def find_best_round_epoch(dataset_keys, df, metric_keys, scGen):
     dfs = []
@@ -307,49 +314,43 @@ def read_kbet_file(hp_kbet_file):
     return kbet_diff
 
 
-def read_batchout(bo_metrics_file, hp_kbet_file, bo_kbet_dir, all_ds_metrics_file, output_dir):
-    hp = get_hp_metrics_kbet_diff(all_ds_metrics_file, hp_kbet_file)
-    difference_df = get_bo_metrics_kbet_diff(bo_kbet_dir, bo_metrics_file)
-    difference_df = pd.concat([difference_df, hp])
-    difference_df.to_csv(f"{output_dir}/bo-metrics.csv", index=True)
-    difference_df = pd.read_csv(f"{output_dir}/bo-metrics.csv")
-    difference_df.set_index("Batch Out", inplace=True)
-    plot_bo_hitmap(difference_df, f"{output_dir}/bo-hitmap.png", dpi=300)
+def read_batchout(data_dir):
+    def read_metrics(data_dir, approach):
+        drop_columns = ["Approach", "Dataset", "Seed", "File", "Inclusion", "N_Clients", "Epoch", "Round", "BatchOut", "index"]
+        df = pd.read_csv(os.path.join(data_dir, approach, "benchmark_metrics.csv"))
+        df = df[(df.Seed == 42) & (df.Inclusion == "all") & (df.Dataset == "HumanPancreas")].reset_index()
+        if approach == 'fedscgen':
+            df = df[~((df.File.str.endswith("fed_corrected.h5ad")) & (~df.Batch.isna()))]
+        df.drop(columns=drop_columns, inplace=True)
+        df["Batch"] = df["Batch"].apply(lambda x: int(x + 1) if pd.notna(x) else 0)
+        df.set_index(["Batch"], inplace=True)
+        return df
+    scgen = read_metrics(data_dir, "scgen")
+    fedscgen = read_metrics(data_dir, "fedscgen")
+    diff_df = get_hp_metrics_kbet_diff(scgen, fedscgen, data_dir)
+    bo_kbet_dir = f"{data_dir}/fedscgen/HumanPancreas/all/BO1-C4"
+    diff_df = get_bo_kbet_diff(bo_kbet_dir, diff_df)
+    diff_df.to_csv(f"{data_dir}/bo-metrics.csv", index=True)
+    plot_bo_hitmap(diff_df, f"{data_dir}/bo-hitmap.png", dpi=300)
 
 
-def get_bo_metrics_kbet_diff(bo_kbet_dir, bo_metrics_file):
-    kbet_diff_values = {}
+def get_bo_kbet_diff(bo_kbet_dir, diff_df):
     for bo in range(5):
         file_path = os.path.join(bo_kbet_dir, str(bo), 'kBET_summary_results.csv')
-        kbet_diff_values[bo + 1] = read_kbet_file(file_path)
-    bo_metrics_df = pd.read_csv(bo_metrics_file)
-    bo_metrics_df["Batch Out"] = bo_metrics_df["Batch Out"].apply(lambda x: int(x + 1))
-    if "ILS" in bo_metrics_df.columns:
-        bo_metrics_df.drop(columns=["ILS"], inplace=True)
-    scgen_df = bo_metrics_df[bo_metrics_df['Approach'] == 'scGen'].set_index('Batch Out')
-    scgen_df.drop(columns=["Approach"], inplace=True)
-    fedscgen_df = bo_metrics_df[bo_metrics_df['Approach'] == 'FedscGen'].set_index('Batch Out')
-    fedscgen_df.drop(columns=["Approach"], inplace=True)
-    difference_df = fedscgen_df.subtract(scgen_df).round(2)
-    difference_df["kBET"] = kbet_diff_values.values()
-    return difference_df
+        diff_df.loc[diff_df.index == bo + 1, "kBET"] = read_kbet_file(file_path)
+    return diff_df
 
 
-def get_hp_metrics_kbet_diff(all_ds_metrics_file, hp_kbet_file):
-    all_ds_metrics_df = pd.read_csv(all_ds_metrics_file)
-    hp = all_ds_metrics_df[all_ds_metrics_df["Dataset"] == "HumanPancreas"]
-    hp.drop(columns=["Dataset"], inplace=True)
-    fedscgen_hp = hp[hp["Approach"] == "FedscGen"].reset_index()
-    fedscgen_hp.drop(columns=["Approach", "index"], inplace=True)
-    scgen_hp = hp[hp["Approach"] == "scGen"].reset_index()
-    scgen_hp.drop(columns=["Approach", "index"], inplace=True)
-    hp = fedscgen_hp.subtract(scgen_hp).round(2)
-    kbet_value_diff = read_kbet_file(hp_kbet_file)
-    hp["kBET"] = kbet_value_diff
-    hp["Batch Out"] = None
-    hp.set_index("Batch Out", inplace=True)
-    return hp
 
+def get_hp_metrics_kbet_diff(scgen, fedscgen, data_dir):
+    diff = fedscgen.subtract(scgen).round(2)
+    diff["kBET"] = None
+    kbet_value_diff = read_kbet_file(f"{data_dir}/fedscgen/HumanPancreas/all/BO0-C5/kBET_summary_results.csv")
+    diff.loc[diff.index == 0, "kBET"] = kbet_value_diff
+    return diff
+
+def get_hp_diff(res_dir):
+    pass
 
 def read_kbet(data_dir):
     for inclusion in ["all", "combined", "dropped"]:
@@ -1158,11 +1159,11 @@ if __name__ == '__main__':
         read_tuning_res(args.data_dir)
     elif args.scenario == "wmw":
         plot_smpc_wmw_heatmap(args.data_dir)
-    elif args.scenario == "kbet-diff":
-        read_kbet(args.data_dir)
     elif args.scenario == "batchout":
         read_batchout(args.bo_metrics_file, args.hp_kbet_file, args.bo_kbet_dir, args.all_ds_metrics_file,
                       args.output_dir)
+    elif args.scenario == "kbet-diff":
+        read_kbet(args.data_dir)
     elif args.scenario == "scenarios":
         read_scenarios_metrics(args.data_dir)
     elif args.scenario == "datasets":
