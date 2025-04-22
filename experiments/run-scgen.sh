@@ -1,5 +1,5 @@
 #!/bin/bash
-
+AVAILABLE_GPUS="${1:-0,1,2,3}"
 source ./config.sh
 declare -a TASK_QUEUE
 

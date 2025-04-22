@@ -1,7 +1,5 @@
 # config.sh
 
-AVAILABLE_GPUS="${1:-0,1,2,3}"
-
 #DROPPED_DATASETS=(MouseCellAtlas HumanPancreas PBMC MouseRetina MouseBrain MouseHematopoieticStemProgenitorCells)
 #
 #DROPPED_CELLTYPES=(
