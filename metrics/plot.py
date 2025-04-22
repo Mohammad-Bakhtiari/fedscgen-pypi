@@ -374,7 +374,7 @@ def read_kbet(data_dir):
 def read_scenarios_metrics(data_dir):
     all_scenarios = []
     for inclusion in ["all", "combined", "dropped"]:
-        df = get_scenario_metrics_diff(data_dir, inclusion, skip_datasets=["CellLine", "HumanDendriticCells"])
+        df = get_scenario_metrics_diff(data_dir, inclusion)
         all_scenarios.append(df)
     df = pd.concat(all_scenarios, ignore_index=True)
     df.to_csv(os.path.join(data_dir, "datasets-metrics-scenarios.csv"))
