@@ -12,11 +12,10 @@ fi
 
 root_dir="$(dirname "$PWD")"
 
-DATASETS=("CellLine" "PBMC" "HumanPancreas" "MouseRetina" "MouseBrain" "MouseHematopoieticStemProgenitorCells" "HumanDendriticCells" "MouseCellAtlas")
 
 # Approach
 if [ "$scenario" = "approach" ]; then
-  for approach in scgen fedscgen fedscgen-smppc; do
+  for approach in scgen fedscgen fedscgen-smpc; do
     python benchmark.py --data_dir "${root_dir}/results" \
     --approach "$approach" \
     --scenarios "approach" &
