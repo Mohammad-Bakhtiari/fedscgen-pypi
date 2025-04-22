@@ -377,53 +377,76 @@ def read_scenarios_metrics(data_dir):
         df = get_scenario_metrics_diff(data_dir, inclusion, skip_datasets=["CellLine", "HumanDendriticCells"])
         all_scenarios.append(df)
     df = pd.concat(all_scenarios, ignore_index=True)
-    df = pd.read_csv(os.path.join(data_dir, "datasets-metrics-scenarios.csv"))
+    df.to_csv(os.path.join(data_dir, "datasets-metrics-scenarios.csv"))
+    plot_scenarios_heatmap(df)
+
+
+def plot_scenarios_heatmap(df):
+    if 'Unnamed: 0' in df.columns:
+        df.drop(columns=['Unnamed: 0'], inplace=True)
     df["inclusion"] = df["inclusion"].apply(lambda x: x.capitalize())
-    # subplot heatmap of each dataset for all metrics vs inclusion
-    fig, axs = plt.subplots(2, 3, figsize=(30, 8), squeeze=True)
-    fig.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1, wspace=0.01, hspace=0.01)
-    i = 0
-    j = 0
+
+    # Subplot: 3 rows, 2 columns
+    fig, axs = plt.subplots(3, 2, figsize=(30, 18), squeeze=True)
+    fig.subplots_adjust(left=0.09, right=0.92, top=0.99, bottom=0.08, wspace=0.01, hspace=0.01)
+
+    # Normalize heatmap color scaling
     abs_max = max([abs(df.drop(columns=["Dataset", "inclusion"]).min().min()),
-                   abs(df.drop(columns=["Dataset", "inclusion"]).max().max())]
-                  )
-    abs_max = 1
+                   abs(df.drop(columns=["Dataset", "inclusion"]).max().max())])
+    abs_max = 1  # fixed color scale range
     norm = colors.Normalize(vmin=-abs_max, vmax=abs_max)
     cmap = cm.get_cmap('RdBu')
     mappable = cm.ScalarMappable(norm=norm, cmap=cmap)
 
-    for dataset in ["HP", "MB", "MR", "MCA", "PBMC", "MHSPC"]:
+    datasets = ["HP", "MB", "MR", "MCA", "PBMC", "MHSPC"]
+
+    for idx, dataset in enumerate(datasets):
+        row, col = divmod(idx, 2)
+        ax = axs[row][col]
+
         subset = df[df["Dataset"] == dataset].set_index("inclusion")
         subset.drop(columns=["Dataset"], inplace=True)
-        if i == 3:
-            i = 0
-            j += 1
-        ax = axs[j][i]
 
-        sns.heatmap(subset, annot=True, cmap='RdBu', center=0, ax=ax, cbar=False, annot_kws={"size": 16}, square=True,
-                    vmin=-abs_max, vmax=abs_max)
-        ax.set_title(dataset, fontsize=30)
+        sns.heatmap(
+            subset,
+            annot=True,
+            cmap='RdBu',
+            center=0,
+            ax=ax,
+            cbar=False,
+            annot_kws={"size": 26},
+            square=True,
+            vmin=-abs_max,
+            vmax=abs_max
+        )
+
+        ax.set_title(dataset, fontsize=34)
         ax.grid(False)
-        if i == 0:
-            ax.set_ylabel("Inclusion", fontsize=30)
-            ax.set_yticklabels(ax.get_yticklabels(), fontsize=20, rotation=0, ha='right')
+
+        # Y-axis label and ticks
+        if col == 0:
+            ax.set_ylabel("Inclusion", fontsize=32)
+            ax.set_yticklabels(ax.get_yticklabels(), fontsize=28, rotation=0, ha='right')
         else:
             ax.set_ylabel('')
             ax.yaxis.set_visible(False)
-        if j == 1:
-            ax.set_xlabel("Metrics", fontsize=30)
-            ax.set_xticklabels(ax.get_xticklabels(), fontsize=20, rotation=45, ha='right')
+
+        # X-axis label and ticks
+        if row == 2:
+            ax.set_xlabel("Metrics", fontsize=32)
+            ax.set_xticklabels(ax.get_xticklabels(), fontsize=28, rotation=45, ha='right')
         else:
             ax.set_xlabel('')
             ax.xaxis.set_visible(False)
-        i += 1
-    # plot cbar
-    plt.subplots_adjust(wspace=0.05, hspace=0.1)
-    cbar_ax = fig.add_axes([0.91, 0.25, 0.015, 0.5])
-    cbar = plt.colorbar(mappable, cax=cbar_ax)
-    cbar.ax.tick_params(labelsize=20)
-    plt.savefig(os.path.join(data_dir, "datasets-metrics-scenarios.png"), dpi=300)
 
+    # Add colorbar
+    cbar_ax = fig.add_axes([0.93, 0.25, 0.015, 0.5])
+    cbar = plt.colorbar(mappable, cax=cbar_ax)
+    cbar.ax.tick_params(labelsize=22)
+
+    # Save figure
+    plt.savefig(os.path.join(data_dir, "datasets-metrics-scenarios.png"), dpi=300)
+    plt.close()
 
 def read_datasets_metrics(data_dir):
     df = get_scenario_metrics_diff(data_dir, inclusion="all")
@@ -453,31 +476,28 @@ def read_datasets_metrics(data_dir):
     plt.savefig(os.path.join(data_dir, "datasets-metrics-all.png"), dpi=300)
 
 
-def get_scenario_metrics_diff(data_dir, inclusion, skip_datasets=None):
-    kbet_df = {}
+def get_scenario_metrics_diff(data_dir, inclusion):
+    def read_approach_matrics(approach):
+        df = pd.read_csv(os.path.join(data_dir, approach, "benchmark_metrics.csv"))
+        df = df[(df.Seed == 42) & (df.Inclusion == inclusion) & (df.Batch.isna())]
+        df.drop(columns=["Seed", "File", "Inclusion", "N_Clients", "Epoch", "Round", "Approach", "Batch", "BatchOut"], inplace=True)
+        df.Dataset = df.Dataset.apply(lambda x: DS_MAP[x])
+        df = df[~df.Dataset.isin(["CL", "HDC"])]
+        df.set_index("Dataset", inplace=True)
+        return df
+
+    fedscgen = read_approach_matrics("fedscgen")
+    scgen = read_approach_matrics("scgen")
+    metrics_df = fedscgen.subtract(scgen).round(2)
+    metrics_df["kBET"] = None
     for dataset, acr in zip(DATASETS, DATASETS_ACRONYM):
-        if inclusion != "all" and dataset in ["CellLine", "HumanDendriticCells"]:
-            continue
-        if skip_datasets:
-            if dataset in skip_datasets:
-                continue
         n_clients = 5 if dataset == "HumanPancreas" else 3 if dataset == "CellLine" else 2
-        kbet_file = os.path.join(data_dir, dataset, inclusion, f"BO0-C{n_clients}", "kBET_summary_results.csv")
-        kbet_df[acr] = read_kbet_file(kbet_file)
-    kbet_df = pd.DataFrame(data=kbet_df.values(), columns=["kBET"], index=kbet_df.keys())
-    metrics_df = pd.read_csv(os.path.join(data_dir, f"fed_cent_metrics-{inclusion}.csv"))
-    if inclusion != "all":
-        metrics_df = metrics_df[~metrics_df["Dataset"].isin(["CellLine", "HumanDendriticCells"])]
-    metrics_df["Dataset"] = metrics_df["Dataset"].apply(lambda x: DATASETS_ACRONYM[DATASETS.index(x)])
-    fedscgen = metrics_df[metrics_df["Approach"] == "FedscGen"].set_index("Dataset")
-    fedscgen.drop(columns=["Approach"], inplace=True)
-    scgen = metrics_df[metrics_df["Approach"] == "scGen"].set_index("Dataset")
-    scgen.drop(columns=["Approach"], inplace=True)
-    metric = fedscgen.subtract(scgen).round(2)
-    metric["kBET"] = kbet_df
-    metric["inclusion"] = inclusion
-    metric.reset_index(inplace=True)
-    return metric
+        kbet_file = os.path.join(data_dir,"fedscgen", dataset, inclusion, f"BO0-C{n_clients}", "kBET_summary_results.csv")
+        metrics_df.loc[metrics_df.index == acr, "kBET"] = read_kbet_file(kbet_file)
+
+    metrics_df["inclusion"] = inclusion
+    metrics_df.reset_index(inplace=True)
+    return metrics_df
 
 
 def get_classification_accuracy(data_dir):
