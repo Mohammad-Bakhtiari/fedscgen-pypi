@@ -1,6 +1,6 @@
-args <- commandArgs(trailingOnly = TRUE)
+library(reticulate)
 use_condaenv("r_eval", required = TRUE)
-
+args <- commandArgs(trailingOnly = TRUE)
 # Ensure we have at least one argument (the directory)
 if (length(args) < 3) {
   stop("Please provide the directory path containing the .h5ad files.")
