@@ -406,6 +406,7 @@ def plot_scenarios_heatmap(df, data_dir):
 
         subset = df[df["Dataset"] == dataset].set_index("inclusion")
         subset.drop(columns=["Dataset"], inplace=True)
+        subset.columns = [col.strip().replace(" ", "_") for col in subset.columns]
         print(subset)
         sns.heatmap(
             subset,
