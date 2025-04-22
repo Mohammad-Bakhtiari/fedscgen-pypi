@@ -1,10 +1,8 @@
 #!/bin/bash
 
 AVAILABLE_GPUS="${1:-0,1,2,3}"
-
+source ./config.sh
 declare -a TASK_QUEUE
-
-DATASETS=(HumanDendriticCells MouseCellAtlas HumanPancreas PBMC CellLine MouseRetina MouseHematopoieticStemProgenitorCells MouseBrain)
 
 for dataset in "${DATASETS[@]}"; do
   case "$dataset" in
