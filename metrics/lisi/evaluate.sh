@@ -4,10 +4,7 @@ INCLUSION=$1
 
 parent_dir="$(dirname "$PWD")"
 root_dir="$(dirname "$parent_dir")"
-script="lisi.R"
-if [[ "$INCLUSION" == "all" ]]; then
-  script="lisi_bootstrap.R"
-fi
+
 DATASETS=("CellLine" "PBMC" "HumanPancreas" "MouseRetina" "MouseBrain" "MouseHematopoieticStemProgenitorCells" "HumanDendriticCells" "MouseCellAtlas")
 
 # Array to store arguments for execution
@@ -52,9 +49,10 @@ for dataset in "${DATASETS[@]}"; do
     echo "ERROR: Missing file: $fedscgen_smpc"
     missing_files=1
   fi
+
   output_dir="${root_dir}/results/fedscgen/${dataset}/${INCLUSION}/BO0-C${n_clients}"
   # Store command for later execution
-  commands+=("Rscript ${script} \"${raw}\" \"${scgen}\" \"${fedscgen}\" \"${fedscgen_smpc}\" \"${output_dir}\"")
+  commands+=("Rscript lisi.R \"${raw}\" \"${scgen}\" \"${fedscgen}\" \"${fedscgen_smpc}\" \"${output_dir}\"")
 done
 
 
