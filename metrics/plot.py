@@ -660,21 +660,22 @@ def collect_lisi_results(data_dir, inclusions, datasets):
         for ind, dataset in enumerate(datasets):
             n_clients = 5 if dataset == "HumanPancreas" else 3 if dataset == "CellLine" else 2
             csv_path = os.path.join(data_dir, dataset, inclusion, f"BO0-C{n_clients}", 'lisi_results.csv')
+            print(csv_path)
             if os.path.exists(csv_path):
                 df = pd.read_csv(csv_path)
-                df.rename(columns={"file_name": "Approach"}, inplace=True)
-                df["Approach"] = df["Approach"].apply(lambda x: APPROACH_MAP[x])
-                df["Dataset"] = DATASETS_ACRONYM[ind]
-                aggregated_data.append(df)
+                # df.rename(columns={"file_name": "Approach"}, inplace=True)
+                # df["Approach"] = df["Approach"].apply(lambda x: APPROACH_MAP[x])
+                # df["Dataset"] = DATASETS_ACRONYM[ind]
+                # aggregated_data.append(df)
             else:
                 raise FileNotFoundError(f"{csv_path} is not exist")
         # Concatenate all dataframes to get a single dataframe for the current target.
-        aggregated_df = pd.concat(aggregated_data, ignore_index=True)
-        categories = ["Raw", "scGen", "FedscGen"]
-        if inclusion == "all":
-            categories.append("FedscGen-SMPC")
-        aggregated_df['Approach'] = pd.Categorical(aggregated_df['Approach'], categories=categories, ordered=True)
-        aggregated_df.to_csv(f"{data_dir}/lisi_{inclusion}.csv", index=False)
+        # aggregated_df = pd.concat(aggregated_data, ignore_index=True)
+        # categories = ["Raw", "scGen", "FedscGen"]
+        # if inclusion == "all":
+        #     categories.append("FedscGen-SMPC")
+        # aggregated_df['Approach'] = pd.Categorical(aggregated_df['Approach'], categories=categories, ordered=True)
+        # aggregated_df.to_csv(f"{data_dir}/lisi_{inclusion}.csv", index=False)
 
 def plot_lisi(data_dir, inclusions=["dropped", "combined"]):
     color_palette = sns.color_palette("viridis", 3)
