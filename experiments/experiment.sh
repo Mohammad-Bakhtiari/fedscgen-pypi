@@ -1,17 +1,6 @@
 #!/bin/bash
 AVAILABLE_GPUS="${1:-0,1,2,3}"
 
-source "$(conda info --base)/etc/profile.d/conda.sh" || {
-    echo "❌ Failed to source conda environment script."
-    exit 1
-}
-
-# Activate fedscgen environment
-conda activate fedscgen || {
-    echo "❌ Failed to activate fedscgen environment."
-    exit 1
-}
-
 chmod +x run-scgen.sh
 echo "Running scgen for combined and dropped inclusion scenarios"
 ./run-scgen.sh "${AVAILABLE_GPUS}"
