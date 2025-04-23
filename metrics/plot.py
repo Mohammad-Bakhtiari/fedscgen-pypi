@@ -721,7 +721,7 @@ def plot_lisi(data_dir, inclusions=['all', "dropped", "combined"]):
         plt.subplot(1, 2, 1)
         ax1 = sns.boxplot(x='Dataset', y='batch', hue='Approach', data=aggregated_df,
                           palette=file_name_to_color)
-        ax1.legend(fontsize=16)
+        ax1.legend(fontsize=20)
 
         # Boxplot for 'cell_type'
         plt.subplot(1, 2, 2)
