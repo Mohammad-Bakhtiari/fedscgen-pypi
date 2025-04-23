@@ -1,5 +1,16 @@
 #!/bin/bash
 
+source "$(conda info --base)/etc/profile.d/conda.sh" || {
+    echo "❌ Failed to source conda environment script."
+    exit 1
+}
+
+# Activate fedscgen environment
+conda activate r_eval || {
+    echo "❌ Failed to activate r_eval environment."
+    exit 1
+}
+
 root_dir="$(dirname "$PWD")"
 
 chmod +x benchmark.sh
