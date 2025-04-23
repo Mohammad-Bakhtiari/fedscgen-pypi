@@ -741,7 +741,7 @@ def plot_lisi(data_dir, inclusions=['all', "dropped", "combined"]):
         plt.savefig(f'{data_dir}/lisi_{inclusion}.png', dpi=1000)
         plt.close()
 
-def plot_accuracy_diff(df, plot_dir, datasets):
+def plot_accuracy_diff(df, plot_dir):
     df['Dataset'] = df['Dataset'].map(dict(zip(DATASETS, DATASETS_ACRONYM)))
     df_long = df.melt(
         id_vars=['Dataset', 'Fold'],
@@ -764,10 +764,21 @@ def plot_accuracy_diff(df, plot_dir, datasets):
     # Formatting
     plt.axhline(0, color='gray', linestyle='--', linewidth=1)  # Reference line at 0
     plt.title('')
-    plt.legend(title='', loc='upper left', fontsize=16, frameon=False, bbox_to_anchor=(-.2, 1.1), ncol=2)
+    plt.legend(
+        title='',
+        loc='upper left',
+        fontsize=18,
+        frameon=False,
+        bbox_to_anchor=(-.2, 1.1),
+        ncol=2,
+        columnspacing=0.4,
+        borderaxespad=0.0,
+        handletextpad=0.2
+    )
 
     plt.tight_layout()
     plt.savefig(f'{plot_dir}/classification_accuracy_difference.png', dpi=300)
+
 
 def get_classification_stats(data_dir):
     """Reads classification accuracy files, aligns runs, and computes statistics.
@@ -1213,6 +1224,4 @@ if __name__ == '__main__':
         collect_lisi_results(args.data_dir)
         plot_lisi(args.data_dir)
     elif args.scenario == "classification":
-        read_classification(args.data_dir)
-    elif args.scenario == "classification_error_bar":
         classification_error_bar_plot(args.data_dir)
