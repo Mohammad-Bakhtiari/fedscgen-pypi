@@ -12,11 +12,6 @@ conda activate fedscgen || {
     exit 1
 }
 
-if [ ! -d logs ]; then
-    echo "Creating logs/ directory..."
-    mkdir logs
-fi
-
 chmod +x run-scgen.sh
 echo "Running scgen for combined and dropped inclusion scenarios"
 ./run-scgen.sh "${AVAILABLE_GPUS}"
