@@ -654,17 +654,19 @@ def set_fontsize(ax, y_label, font_size, tick_fontsize):
 #         plt.savefig(f'{data_dir}/lisi_{inclusion}.png', dpi=1000)
 #         plt.close()
 
-def collect_lisi_results(data_dir, inclusions, datasets):
+def collect_lisi_results(data_dir, inclusions):
     for inclusion in inclusions:        
         aggregated_data = []
-        for ind, dataset in enumerate(datasets):
+        for dataset in DATASETS:
+            if inclusion != "all" and dataset in ["CellLine", "HumanDendriticCells"]:
+                continue
             n_clients = 5 if dataset == "HumanPancreas" else 3 if dataset == "CellLine" else 2
             csv_path = os.path.join(data_dir, dataset, inclusion, f"BO0-C{n_clients}", 'lisi_results.csv')
             if os.path.exists(csv_path):
                 df = pd.read_csv(csv_path)
                 df.rename(columns={"file_name": "Approach"}, inplace=True)
                 df["Approach"] = df["Approach"].apply(lambda x: APPROACH_MAP[x])
-                df["Dataset"] = DATASETS_ACRONYM[ind]
+                df["Dataset"] = dataset
                 aggregated_data.append(df)
             else:
                 raise FileNotFoundError(f"{csv_path} is not exist")
@@ -676,8 +678,39 @@ def collect_lisi_results(data_dir, inclusions, datasets):
         aggregated_df['Approach'] = pd.Categorical(aggregated_df['Approach'], categories=categories, ordered=True)
         aggregated_df.to_csv(f"{data_dir}/lisi_{inclusion}.csv", index=False)
 
-def plot_lisi(data_dir, inclusions=["dropped", "combined"]):
-    color_palette = sns.color_palette("viridis", 3)
+# def plot_lisi(data_dir, inclusions=["dropped", "combined"]):
+#     color_palette = sns.color_palette("viridis", 3)
+#     for inclusion in inclusions:
+#         aggregated_df = pd.read_csv(f"{data_dir}/lisi_{inclusion}.csv")
+#         hatch_patterns = ['/', '\\', '|']
+#         plt.figure(figsize=(18, 6))
+#         approaches = aggregated_df["Approach"].unique()
+#         file_name_to_color = {file_name: color for file_name, color in zip(approaches, color_palette)}
+#         plt.subplot(1, 2, 1)
+#         ax1 = sns.boxplot(x='Dataset', y='batch', hue='Approach', data=aggregated_df,
+#                           palette=file_name_to_color)
+#         ax1.legend(fontsize=16)
+#
+#         # Boxplot for 'cell_type'
+#         plt.subplot(1, 2, 2)
+#         ax2 = sns.boxplot(x='Dataset', y='cell_type', hue='Approach', data=aggregated_df,
+#                           palette=file_name_to_color)
+#         ax2.legend_.remove()
+#         set_fontsize(ax1, 'iLISI', font_size=22, tick_fontsize=20)
+#         set_fontsize(ax2, 'cLISI', font_size=22, tick_fontsize=20)
+#         # Add hatch patterns for models (file_name)
+#         for i, patches in enumerate(zip(ax1.artists, ax2.artists)):
+#             hatch = hatch_patterns[i % len(hatch_patterns)]
+#             patches[0].set_hatch(hatch)
+#             patches[1].set_hatch(hatch)
+#
+#         # Adjust layout and save
+#         plt.tight_layout()
+#         plt.savefig(f'{data_dir}/lisi_{inclusion}.png', dpi=1000)
+#         plt.close()
+
+def plot_lisi(data_dir, inclusions=['all', "dropped", "combined"]):
+    color_palette = sns.color_palette("viridis", 4)
     for inclusion in inclusions:
         aggregated_df = pd.read_csv(f"{data_dir}/lisi_{inclusion}.csv")
         hatch_patterns = ['/', '\\', '|']
@@ -706,7 +739,6 @@ def plot_lisi(data_dir, inclusions=["dropped", "combined"]):
         plt.tight_layout()
         plt.savefig(f'{data_dir}/lisi_{inclusion}.png', dpi=1000)
         plt.close()
-
 
 def plot_accuracy_diff(df, plot_dir, datasets):
     df['Dataset'] = df['Dataset'].map(dict(zip(DATASETS, DATASETS_ACRONYM)))
@@ -1181,8 +1213,5 @@ if __name__ == '__main__':
     elif args.scenario == "classification_error_bar":
         classification_error_bar_plot(args.data_dir)
     elif args.scenario == "lisi":
-        datasets = [ds for ds in DATASETS if ds not in ["CellLine", "HumanDendriticCells"]]
-        collect_lisi_results(args.data_dir, ["dropped", "combined"], datasets)
+        collect_lisi_results(args.data_dir, ["dropped", "combined"])
         plot_lisi(args.data_dir)
-        datasets = [ds for ds in DATASETS if ds != "MouseBrain"]
-        collect_lisi_results(args.data_dir, ["all"], datasets)
