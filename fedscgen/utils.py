@@ -209,7 +209,6 @@ def classify_celltypes(x_train, y_train, x_test, y_test, epochs, lr, batch_size,
     elif model_name.lower() == "kmeans":
         return train_kmeans(x_train, y_train, x_test, y_test, n_classes)
     test_loader, train_loader = load_dataloaders(x_train, y_train, x_test, y_test, batch_size)
-    print(init_model)
     criterion, model, optimizer = instantiate_model(x_test.shape[1], n_classes, lr, init_model, model_name, hidden_size,
                                                     device)
 
@@ -388,7 +387,6 @@ def normalize_data(data, method):
 
 def instantiate_model(input_size, n_classes, lr, init_model, model_name, hidden_size, device):
     # Instantiate the model, loss function, and optimizer
-    print("model_name", model_name)
     if model_name.lower() == "mlp":
         model = MLP(input_size=input_size, hidden_size=64, output_size=n_classes)
     elif model_name.lower() == "mlp-norm":
@@ -396,7 +394,6 @@ def instantiate_model(input_size, n_classes, lr, init_model, model_name, hidden_
     else:
         raise ModuleNotFoundError(f"There is no implemented model for {model_name}")
     if os.path.exists(init_model):
-        print(init_model)
         model.load_state_dict(torch.load(init_model))
     else:
         torch.save(model.state_dict(), init_model)
