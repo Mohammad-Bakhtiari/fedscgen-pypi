@@ -37,5 +37,5 @@ echo "Running FedscGen-SMPC with different seeds for the 'all' inclusion scenari
 ./run-fedscgen-smpc.sh "${AVAILABLE_GPUS}"
 
 chmod +x run-classification.sh
-echo "Running centralized classification using corrected data by scGen and FedscGen"
-./run-classification.sh "${NUM_GPUS}"
+echo "Running centralized classification using corrected data"
+./run-classification.sh "${AVAILABLE_GPUS}"
