@@ -9,18 +9,23 @@ FedscGen is a federated learning framework for privacy-aware batch effect correc
 
 ## 🔧 Setup Environment
 
-Before reproducing the results, set up the required environments.
-
-To create the Conda environments for running FedscGen, please follow the instructions in the [`setup_env.sh`](setup_env.sh) script.
-
-⚠️ Make sure you execute this script in a Bash shell.
-```shell
-chmod +x setup_env.sh
-./setup_env.sh
-```
-It will create two Conda environments:
+To reproduce the results of the paper, please follow the instructions to create two Conda environments:
 1. `fedscgen`: Python environment for FedscGen.
 2. `r_eval`: R + Python environment for benchmarking.
+
+### Set up a Python environment for FedscGen:
+```shell
+conda env create -f environment.yml
+conda activate fedscgen
+export SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL=True
+pip install crypten==0.4.1
+```
+### Set up an R environment for running kBET and LISI for evaluation:
+```shell
+conda env create -f r_eval.yml
+conda activate r_eval
+Rscript install_libraries.R
+```
 
 
 ## Dataset and Models
@@ -37,6 +42,7 @@ Navigate to the [`experiments/`](experiments) directory and run [`experiments.sh
 while providing a comma-separated list of GPU indices to use for training. For example, to use GPUs 0 and 1:
 
 ```shell
+conda activate fedscgen
 cd experiments
 chmod +x experiment.sh
 ./experiment.sh 0,1
@@ -44,11 +50,12 @@ chmod +x experiment.sh
 
 Once the experiments are complete, run the evaluation metrics by navigating to the [`metrics/`](metrics) directory and executing [`evaluate.sh`](metrics/evaluate.sh):
 ```shell
+conda activate r_eval
 cd metrics
 chmod +x evaluation.sh
 ./evaluation.sh
 ```
-All results will be saved in the [`results/`](results) directory. Both scripts will automatically activate the appropriate Conda environment and make full use of available system resources.
+All results will be saved in the [`results/`](results) directory. Both scripts will automatically fully utilize the available system resources.
 
 ## <a href="https://featurecloud.ai/app/fedscgen" target="_blank"> <img src="https://featurecloud.ai/assets/fc_logo.svg" alt="FeatureCloud Logo" width="160"/> </a> app
 FedscGen is implemented for real-world federated collaboration as a FeatureCloud app with automated deployment.
