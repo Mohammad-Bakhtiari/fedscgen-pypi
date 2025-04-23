@@ -140,18 +140,7 @@ def save_combined_legend(batch_color_dict, cell_color_dict, output_path, dataset
     plt.close(fig)
 
 
-def plot_tuning(data_dir, fed_data_dir, raw_data_dir, batch_key, cell_key, epoch, round, output_dir):
-    print(f"Plotting UMAP for tuning round {round} and epoch {epoch} ...")
-    for dataset_name in DATASETS:
-        files = {
-            'Raw': os.path.join(raw_data_dir, f'{dataset_name}.h5ad'),
-            'ScGen': os.path.join(data_dir, dataset_name, "all", 'corrected.h5ad'),
-            'FedScGen': os.path.join(fed_data_dir, dataset_name, f"E{epoch}", f'corrected_{round}.h5ad')
-        }
-        plot_dataset_umap(batch_key, cell_key, dataset_name, "all", files, output_dir)
-
-
-def plot_inclusion_scenarios(data_dir, fed_data_dir, raw_data_dir, batch_key, cell_key, output_dir):
+def plot_inclusion_scenarios(data_dir, raw_data_dir, batch_key, cell_key, output_dir):
     print(f"Plotting UMAP for inclusion scenarios ...")
     inclusions = ['all', 'dropped', 'combined']
     for inclusion in inclusions:
@@ -161,9 +150,8 @@ def plot_inclusion_scenarios(data_dir, fed_data_dir, raw_data_dir, batch_key, ce
             print(f"Plotting UMAP for {dataset_name} for inclusion {inclusion}...")
             n_clients = 5 if dataset_name == "HumanPancreas" else 3 if dataset_name == "CellLine" else 2
             files = {
-                'ScGen': os.path.join(data_dir, dataset_name, inclusion, 'corrected.h5ad'),
-                'FedScGen': os.path.join(fed_data_dir, dataset_name, inclusion, f"BO0-C{n_clients}",
-                                         "fed_corrected.h5ad"),
+                'ScGen': f"{data_dir}/scgen/{dataset_name}/{inclusion}/corrected.h5ad",
+                'FedScGen': f"{data_dir}/fedscgen/{dataset_name}/{inclusion}/BO0-C{n_clients}/fed_corrected.h5ad",
                 'Raw': os.path.join(raw_data_dir, f'{dataset_name}.h5ad')
             }
             plot_dataset_umap(batch_key, cell_key, dataset_name, inclusion, files, output_dir)
@@ -186,12 +174,12 @@ def plot_dataset_umap(batch_key, cell_key, dataset_name, inclusion, files, outpu
             raise FileNotFoundError(f"{key} file for {dataset_name} not found. Skipping... \n {file}")
 
 
-def plot_batch_out(data_dir, fed_data_dir, batch_key, cell_key, n_batches, output_dir):
+def plot_batch_out(data_dir, batch_key, cell_key, n_batches, output_dir):
     print(f"Plotting UMAP for batch out scenarios ...")
     for b in range(n_batches):
         files = {
-            'ScGen': os.path.join(data_dir, f"BO{b}", "corrected.h5ad"),
-            'FedScGen': os.path.join(fed_data_dir, f"{b}", "fed_corrected_with_new_studies.h5ad")
+            'ScGen': f"{data_dir}/scgen/HumanPancreas/all/BO{b}/corrected.h5ad",
+            'FedScGen': f"{data_dir}/fedscgen/HumanPancreas/all/BO1-C4/{b}/fed_corrected_with_new_studies.h5ad",
         }
         plot_dataset_umap(batch_key, cell_key, f"HumanPancreas-BO{b}", "all", files, output_dir, plot_legend=True)
 
@@ -201,7 +189,6 @@ if __name__ == "__main__":
 
     # Add arguments
     parser.add_argument("--data_dir", type=str, help="Path to the main data directory")
-    parser.add_argument("--fed_data_dir", type=str, help="Path to the federated data directory")
     parser.add_argument('--raw_data_dir', type=str, help="Path to the raw data directory", default=None)
     parser.add_argument("--output_dir", type=str, required=True, help="Path to the output directory")
     parser.add_argument('--cell_key', help='Cell key name.', default="cell_type")
@@ -209,16 +196,11 @@ if __name__ == "__main__":
     parser.add_argument('--round', type=int, default=-1, help="Round number for tuning")
     parser.add_argument('--epoch', type=int, default=-1, help="Epoch number for tuning")
     parser.add_argument('--n_batches', type=int, default=5, help="Number of batches for batch out scenario")
-    parser.add_argument('--scenario', type=str, choices=['datasets', 'tuning', 'batchout'], default='datasets')
+    parser.add_argument('--scenario', type=str, choices=['datasets', 'batchout'], default='datasets')
 
     # Parse the arguments
     args = parser.parse_args()
     if args.scenario == "datasets":
-        plot_inclusion_scenarios(args.data_dir, args.fed_data_dir, args.raw_data_dir, args.batch_key, args.cell_key,
-                                   args.output_dir)
-    elif args.scenario == "tuning":
-        plot_tuning(args.data_dir, args.fed_data_dir, args.raw_data_dir, args.batch_key, args.cell_key, args.epoch,
-                    args.round,
-                    args.output_dir)
+        plot_inclusion_scenarios(args.data_dir, args.raw_data_dir, args.batch_key, args.cell_key, args.output_dir)
     elif args.scenario == "batchout":
-        plot_batch_out(args.data_dir, args.fed_data_dir, args.batch_key, args.cell_key, args.n_batches, args.output_dir)
+        plot_batch_out(args.data_dir, args.batch_key, args.cell_key, args.n_batches, args.output_dir)
