@@ -676,6 +676,7 @@ def collect_lisi_results(data_dir, inclusions):
         if inclusion == "all":
             categories.append("FedscGen-SMPC")
         aggregated_df['Approach'] = pd.Categorical(aggregated_df['Approach'], categories=categories, ordered=True)
+        aggregated_df.Dataset = aggregated_df.Dataset.apply(lambda x: DS_MAP[x])
         aggregated_df.to_csv(f"{data_dir}/lisi_{inclusion}.csv", index=False)
 
 # def plot_lisi(data_dir, inclusions=["dropped", "combined"]):
@@ -1208,10 +1209,10 @@ if __name__ == '__main__':
         read_all_inc_plot_heatmap(args.data_dir)
     elif args.scenario == "kbet-diff":
         read_kbet(args.data_dir)
+    elif args.scenario == "lisi":
+        collect_lisi_results(args.data_dir, ["dropped", "combined"])
+        plot_lisi(args.data_dir)
     elif args.scenario == "classification":
         read_classification(args.data_dir)
     elif args.scenario == "classification_error_bar":
         classification_error_bar_plot(args.data_dir)
-    elif args.scenario == "lisi":
-        collect_lisi_results(args.data_dir, ["dropped", "combined"])
-        plot_lisi(args.data_dir)
