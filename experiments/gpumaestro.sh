@@ -51,7 +51,9 @@ while [ "$RUNNING_TASKS" -lt "$NUM_GPUS" ] && [ ${#TASK_QUEUE[@]} -gt 0 ]; do
     done
 
     echo -e "\e[32m[GPUmaestro]: Running $SCRIPT_TO_RUN on task: $task_name on GPU:$FEDSCGEN_NEXT_GPU\e[0m" >&2
-    "$SCRIPT_TO_RUN" "${args[@]}" &
+    stdbuf -oL -eL "$SCRIPT_TO_RUN" "${args[@]}" \
+    > >(tee "logs/${task_name}.out") \
+    2> >(tee "logs/${task_name}.err" >&2) &
 done
 
 # Keep NUM_GPUS tasks running by replacing finished ones
@@ -76,7 +78,9 @@ while [ ${#TASK_QUEUE[@]} -gt 0 ]; do
     done
 
     echo -e "\e[32m[GPUmaestro]: Running $SCRIPT_TO_RUN on task: $task_name on GPU:$FEDSCGEN_NEXT_GPU\e[0m" >&2
-    "$SCRIPT_TO_RUN" "${args[@]}" &
+    stdbuf -oL -eL "$SCRIPT_TO_RUN" "${args[@]}" \
+    > >(tee "logs/${task_name}.out") \
+    2> >(tee "logs/${task_name}.err" >&2) &
 done
 
 # Wait for all remaining tasks to complete
