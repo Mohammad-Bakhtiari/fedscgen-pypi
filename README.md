@@ -2,7 +2,11 @@
 
 FedscGen is a federated learning framework for privacy-aware batch effect correction in single-cell RNA sequencing (scRNA-seq) data. It enables multiple institutions to collaboratively train a shared variational autoencoder (VAE) model without exchanging raw data. Each site trains a local model and securely shares only model parameters with a central coordinator, which aggregates them to update the global model. After training, the shared model is used to extract latent representations of cells across sites. For each shared cell type, dominant batches are identified, and corresponding mean latent features are calculated and aggregated in a privacy-preserving manner. These latent shifts are then used to locally correct batch effects, allowing new or existing clients to harmonize their datasets while maintaining full control over their data.
 
-![scheme](images/scheme.png)
+<div align="center">
+  <img src="images/scheme.png" alt="scheme" width="600" style="background: transparent;" />
+</div>
+
+
 ## 🔧 Setup Environment
 
 Before reproducing the results, set up the required environments.
