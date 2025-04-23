@@ -654,8 +654,8 @@ def set_fontsize(ax, y_label, font_size, tick_fontsize):
 #         plt.savefig(f'{data_dir}/lisi_{inclusion}.png', dpi=1000)
 #         plt.close()
 
-def collect_lisi_results(data_dir, inclusions):
-    for inclusion in inclusions:        
+def collect_lisi_results(data_dir):
+    for inclusion in ["all", "dropped", "combined"]:
         aggregated_data = []
         for dataset in DATASETS:
             if inclusion != "all" and dataset in ["CellLine", "HumanDendriticCells"]:
@@ -1210,7 +1210,7 @@ if __name__ == '__main__':
     elif args.scenario == "kbet-diff":
         read_kbet(args.data_dir)
     elif args.scenario == "lisi":
-        collect_lisi_results(args.data_dir, ["dropped", "combined"])
+        collect_lisi_results(args.data_dir)
         plot_lisi(args.data_dir)
     elif args.scenario == "classification":
         read_classification(args.data_dir)
