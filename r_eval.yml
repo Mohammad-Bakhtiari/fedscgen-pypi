@@ -499,6 +499,7 @@ dependencies:
       - lit==16.0.6
       - llvmlite==0.40.1
       - loguru==0.7.0
+      - louvain==0.8.2
       - markdown==3.4.4
       - markdown-it-py==3.0.0
       - matplotlib==3.7.1
