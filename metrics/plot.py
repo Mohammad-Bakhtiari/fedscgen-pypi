@@ -334,6 +334,7 @@ def read_plot_batchout(data_dir):
     bo_kbet_dir = f"{data_dir}/fedscgen/HumanPancreas/all/BO1-C4"
     diff_df = get_bo_kbet_diff(bo_kbet_dir, diff_df)
     diff_df = diff_df.astype('float')
+    diff_df = diff_df.loc[diff_df.index[diff_df.index != 0].tolist() + [0]]
     diff_df.to_csv(f"{data_dir}/bo-metrics.csv", index=True)
     print(diff_df)
     plot_bo_hitmap(diff_df, f"{data_dir}/bo-hitmap.png", dpi=300)
