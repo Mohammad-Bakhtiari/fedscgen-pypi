@@ -325,9 +325,6 @@ def read_plot_batchout(data_dir):
         df["Batch"] = df["Batch"].apply(lambda x: int(x + 1) if pd.notna(x) else 0)
         df.set_index(["Batch"], inplace=True)
         return df
-    # if os.path.exists(f"{data_dir}/bo-metrics.csv"):
-    #     diff_df = pd.read_csv(f"{data_dir}/bo-metrics.csv", index_col=0)
-    # else:
     scgen = read_metrics(data_dir, "scgen")
     fedscgen = read_metrics(data_dir, "fedscgen")
     diff_df = get_hp_metrics_kbet_diff(scgen, fedscgen, data_dir)
@@ -336,7 +333,6 @@ def read_plot_batchout(data_dir):
     diff_df = diff_df.astype('float')
     diff_df = diff_df.loc[diff_df.index[diff_df.index != 0].tolist() + [0]]
     diff_df.to_csv(f"{data_dir}/bo-metrics.csv", index=True)
-    print(diff_df)
     plot_bo_hitmap(diff_df, f"{data_dir}/bo-hitmap.png", dpi=300)
 
 
