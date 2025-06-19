@@ -1,2 +1,2 @@
-__version__ = "0.0.5"
-from FedScGen import FedScGen, ScGen
+__version__ = "0.0.6"
+from .FedScGen import FedScGen, ScGen
