@@ -7,52 +7,89 @@ from functools import partial
 import matplotlib.lines as mlines
 
 
+def generate_palette(unique_celltypes):
+    """
+    Build a large palette:
+     - First 20 colors from 'tab20'
+     - If > 20, next up to 20 from 'tab20b'
+     - If > 40, sample the remainder from 'gist_ncar'
+    Args:
+        unique_celltypes: list of category names
+    Returns:
+        dict mapping each category to an (r, g, b, a) tuple
+    """
+    n_cats = len(unique_celltypes)
+    palette_ = {}
+
+    if n_cats <= 20:
+        base = plt.get_cmap("tab20", 20)
+        for i, cat in enumerate(unique_celltypes):
+            palette_[cat] = base(i)
+    elif n_cats <= 40:
+        base1 = plt.get_cmap("tab20", 20)
+        base2 = plt.get_cmap("tab20b", 20)
+        for i, cat in enumerate(unique_celltypes):
+            if i < 20:
+                palette_[cat] = base1(i)
+            else:
+                palette_[cat] = base2(i - 20)
+    else:
+        base1 = plt.get_cmap("tab20", 20)
+        base2 = plt.get_cmap("tab20b", 20)
+        # For the remainder, sample evenly from gist_ncar
+        n_extra = n_cats - 40
+        base3 = plt.get_cmap("gist_ncar", n_extra)
+        for i, cat in enumerate(unique_celltypes):
+            if i < 20:
+                palette_[cat] = base1(i)
+            elif i < 40:
+                palette_[cat] = base2(i - 20)
+            else:
+                palette_[cat] = base3(i - 40)
+    return palette_
+
 def umap_plot(data, wspace, plt_name, batch_key, cell_label_key, use_rep=None):
-    batch_color_dict, cell_color_dict = gen_color_dict(batch_key, cell_label_key, data)
+    """
+    Generate UMAP plots for batch and cell type annotations using a custom palette.
+
+    Args:
+        data: AnnData object
+        wspace: Width space between subplots
+        plt_name: Name for saving the plot
+        batch_key: Key in data.obs for batch annotations
+        cell_label_key: Key in data.obs for cell type annotations
+        use_rep: Representation to use for neighbors (optional)
+
+    Returns:
+        None (saves UMAP plot)
+    """
+    # Extract unique categories
+    batch_categories = data.obs[batch_key].cat.categories.tolist()
+    cell_categories = data.obs[cell_label_key].cat.categories.tolist()
+
+    # Generate color palettes
+    batch_color_dict = generate_palette(batch_categories)
+    cell_color_dict = generate_palette(cell_categories)
+
+    # Compute neighbors and UMAP
     if use_rep:
         sc.pp.neighbors(data, use_rep=use_rep)
     else:
         sc.pp.neighbors(data)
     sc.tl.umap(data)
+
+    # Combine color dictionaries
     combined_color_dict = {**batch_color_dict, **cell_color_dict}
-    sc.pl.umap(data, color=[batch_key, cell_label_key], frameon=False, wspace=wspace, save=plt_name,
-               palette=combined_color_dict)
 
-
-def tsne_plot(data, wspace, plt_name, batch_key, cell_label_key, use_rep=None):
-    # ... (the color setup remains the same)
-    batch_color_dict, cell_color_dict = gen_color_dict(batch_key, cell_label_key, data)
-    if use_rep:
-        sc.pp.neighbors(data, use_rep=use_rep)
-    else:
-        sc.pp.neighbors(data)
-    sc.tl.tsne(data)  # Run t-SNE instead of UMAP
-    combined_color_dict = {**batch_color_dict, **cell_color_dict}
-    sc.pl.tsne(data, color=[batch_key, cell_label_key], frameon=False, wspace=wspace, save=plt_name,
-               palette=combined_color_dict)
-
-
-def gen_color_dict(batch_key, cell_label_key, data):
-    # Define your color map using the specified colors
-    hex_colors = [
-        '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
-        '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#1a55FF', '#55a868',
-        '#c44e52', '#8172b3', '#ccb974', '#64B5CD', '#FFB447', '#82C341',
-        '#D17049', '#705696'
-    ]
-    batch_labels = data.obs[batch_key].unique().tolist()
-    cell_labels = data.obs[cell_label_key].unique().tolist()
-    assert len(cell_labels) <= len(hex_colors), "Not enough colors for labels"
-    if len(hex_colors) >= len(batch_labels):
-        batch_color_dict = {label: hex_colors[i] for i, label in enumerate(batch_labels)}
-    else:
-        batch_color_dict = {label: hex_colors[i % len(hex_colors)] for i, label in enumerate(batch_labels)}
-    if len(hex_colors) >= len(cell_labels):
-        cell_color_dict = {label: hex_colors[i] for i, label in enumerate(cell_labels)}
-    else:
-        cell_color_dict = {label: hex_colors[i % len(hex_colors)] for i, label in enumerate(cell_labels)}
-    return batch_color_dict, cell_color_dict
-
+    # Generate UMAP plot
+    sc.pl.umap(
+        data,
+        color=[batch_key, cell_label_key],
+        frameon=False,
+        wspace=wspace,
+        save=plt_name,
+        palette=combined_color_dict
+    )
 
 def plot_all_umaps(uncorrected, corrected, batch_key, cell_key, umap_directory):
     plot = partial(umap_plot, batch_key=batch_key, cell_label_key=cell_key)
