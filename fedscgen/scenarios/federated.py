@@ -4,7 +4,7 @@ import anndata
 from functools import partial
 import ast
 import os
-from fedscgen.FedscGen import FedScGen
+from fedscgen import FedScGen
 from fedscgen.utils import testset_combination, aggregate, aggregate_batch_sizes, remove_cell_types, combine_cell_types, \
     get_cuda_device, abs_diff_centrally_corrected, check_adata_nan, check_weights_nan, set_seed
 from fedscgen.plots import translate, single_plot
