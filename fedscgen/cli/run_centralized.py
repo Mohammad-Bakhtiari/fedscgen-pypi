@@ -32,8 +32,7 @@ def parse_args():
 
     return parser.parse_args()
 
-
-if __name__ == '__main__':
+def main():
     args = parse_args()
     set_seed(args.seed)
 
@@ -45,3 +44,7 @@ if __name__ == '__main__':
 
     adata = anndata.read_h5ad(args.data_path)
     run_centralized(adata, args)
+
+
+if __name__ == '__main__':
+    main()

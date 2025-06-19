@@ -36,7 +36,7 @@ def parse_args():
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+def main():
     args = parse_args()
     set_seed(args.seed)
     args.hidden_size = [int(x.strip()) for x in args.hidden_size.split(",")]
@@ -47,3 +47,7 @@ if __name__ == '__main__':
 
     adata = anndata.read_h5ad(args.adata)
     run_federated(adata, args)
+
+
+if __name__ == '__main__':
+    main()
