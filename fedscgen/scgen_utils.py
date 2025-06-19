@@ -20,7 +20,6 @@ Modifications made to the original work are licensed under the Apache License, V
 Original work is licensed under the BSD 3-Clause License.
 
 """
-import __init__
 from fedscgen.utils import seed_worker
 from anndata import AnnData
 from scarches.models.scgen.vaearith import vaeArith
