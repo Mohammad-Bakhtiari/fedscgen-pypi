@@ -113,7 +113,6 @@ class CustomTrainer(vaeArithTrainer):
         self.best_state_dict = None
 
         self.logs = defaultdict(list)
-        print(self.adata.obs.batch.value_counts())
         train_data, valid_data = self.train_valid_split(self.adata)
         train_dataset = AnndataDataset(train_data)
         valid_dataset = AnndataDataset(valid_data)
