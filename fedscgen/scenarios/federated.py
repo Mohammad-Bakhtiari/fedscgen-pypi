@@ -60,7 +60,7 @@ def run_federated(adata, args):
               "n_total_samples": len(adata.X),
               }
 
-    batch_type = type(adata.obs.batch.values.tolist()[0])
+    batch_type = type(adata.obs[args.batch_key].values.tolist()[0])
     args.batches = [batch_type(b) for b in args.batches]
 
     print(testset_combination(args.batches, args.batch_out))
