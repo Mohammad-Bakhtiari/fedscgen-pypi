@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="fedscgen",
-    version="0.1",
+    version="0.1.1",
     packages=find_packages(),
     install_requires=[
         "anndata==0.9.1",
@@ -23,6 +23,7 @@ setup(
         "pyro-ppl==1.8.5",
         "python-louvain==0.16",
         "rpy2==3.5.13",
+        "crypten==0.4.0",
     ],
     entry_points={
         "console_scripts": [
@@ -36,6 +37,7 @@ setup(
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     license="Apache-2.0",
+    license_files=["LICENSE"],
     url="https://github.com/Mohammad-Bakhtiari/fedscgen-pypi",
     classifiers=[
         "Programming Language :: Python :: 3",
