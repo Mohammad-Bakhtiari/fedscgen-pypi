@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="fedscgen",
-    version="0.0.8",
+    version="0.1",
     packages=find_packages(),
     install_requires=[
         "anndata==0.9.1",
@@ -35,12 +35,12 @@ setup(
     description="A package for single-cell genomics analysis with scGen",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    license="MIT",
+    license="Apache-2.0",
     url="https://github.com/Mohammad-Bakhtiari/fedscgen-pypi",
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.10",
-        "License :: OSI Approved :: MIT License",
+        "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
